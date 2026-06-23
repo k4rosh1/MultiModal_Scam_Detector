@@ -16,3 +16,10 @@ __pycache__/
 
 # Node modules
 frontend/node_modules/
+
+# Database cache files
+*.db-shm
+*.db-wal
+
+# Model training checkpoints
+checkpoints/
