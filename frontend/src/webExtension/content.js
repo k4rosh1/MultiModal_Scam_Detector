@@ -77,34 +77,34 @@ function detectPlatform() {
   return 'web';
 }
 
-// ============= QR LINK NOTIFICATION SYSTEM =============
-function showQRNotification(qrData, status = 'scanning') {
+// ============= LINK NOTIFICATION SYSTEM =============
+function showLinkNotification(linkData, status = 'scanning') {
   try {
-    const existingNotifs = document.querySelectorAll('.scamshield-qr-notification');
+    const existingNotifs = document.querySelectorAll('.scamshield-link-notification');
     existingNotifs.forEach(n => n.remove());
     
     const notification = document.createElement('div');
-    notification.className = 'scamshield-qr-notification';
+    notification.className = 'scamshield-link-notification';
     
     const icon = status === 'success' ? '✅' : status === 'failed' ? '❌' : '🔍';
-    const title = status === 'success' ? 'QR Link Scan Complete' : 
-                  status === 'failed' ? '⚠️ QR Link Alert' : 'Scanning QR Links...';
-    const message = status === 'success' ? 'All QR links verified - No scams detected' :
-                    status === 'failed' ? 'Potential scam detected in QR links!' :
-                    `Found ${qrData.total} QR link(s) to scan...`;
+    const title = status === 'success' ? 'Link Scan Complete' : 
+                  status === 'failed' ? '⚠️ Link Alert' : 'Scanning Links...';
+    const message = status === 'success' ? 'All links verified - No scams detected' :
+                    status === 'failed' ? 'Potential scam detected in links!' :
+                    `Found ${linkData.total} link(s) to scan...`;
     const color = status === 'success' ? '#4caf50' : status === 'failed' ? '#ff4444' : '#ff9800';
     
     let linksHtml = '';
-    if (qrData.links && qrData.links.length > 0) {
-      linksHtml = `<div class="scamshield-qr-links">`;
-      qrData.links.forEach((link, index) => {
+    if (linkData.links && linkData.links.length > 0) {
+      linksHtml = `<div class="scamshield-links">`;
+      linkData.links.forEach((link, index) => {
         const linkStatus = link.status || 'pending';
         const linkIcon = linkStatus === 'success' ? '✅' : linkStatus === 'failed' ? '❌' : '⏳';
         linksHtml += `
-          <div class="scamshield-qr-link">
+          <div class="scamshield-link">
             <span>${linkIcon}</span>
-            <span class="scamshield-qr-link-url">${link.url.substring(0, 40)}${link.url.length > 40 ? '...' : ''}</span>
-            <span class="scamshield-qr-link-status" style="color: ${linkStatus === 'success' ? '#4caf50' : linkStatus === 'failed' ? '#ff4444' : '#ff9800'}">
+            <span class="scamshield-link-url">${link.url.substring(0, 40)}${link.url.length > 40 ? '...' : ''}</span>
+            <span class="scamshield-link-status" style="color: ${linkStatus === 'success' ? '#4caf50' : linkStatus === 'failed' ? '#ff4444' : '#ff9800'}">
               ${linkStatus === 'success' ? 'Safe' : linkStatus === 'failed' ? '⚠️ Scam' : 'Scanning...'}
             </span>
           </div>
@@ -114,14 +114,14 @@ function showQRNotification(qrData, status = 'scanning') {
     }
     
     notification.innerHTML = `
-      <div class="scamshield-qr-notification-content">
-        <div class="scamshield-qr-notification-icon">${icon}</div>
-        <div class="scamshield-qr-notification-body">
-          <div class="scamshield-qr-notification-title" style="color: ${color}">${title}</div>
-          <div class="scamshield-qr-notification-message">${message}</div>
+      <div class="scamshield-link-notification-content">
+        <div class="scamshield-link-notification-icon">${icon}</div>
+        <div class="scamshield-link-notification-body">
+          <div class="scamshield-link-notification-title" style="color: ${color}">${title}</div>
+          <div class="scamshield-link-notification-message">${message}</div>
           ${linksHtml}
         </div>
-        <button class="scamshield-qr-notification-close">×</button>
+        <button class="scamshield-link-notification-close">×</button>
       </div>
     `;
     
@@ -150,34 +150,34 @@ function showQRNotification(qrData, status = 'scanning') {
       align-items: flex-start;
       gap: 12px;
     `;
-    notification.querySelector('.scamshield-qr-notification-content').style.cssText = contentStyle;
+    notification.querySelector('.scamshield-link-notification-content').style.cssText = contentStyle;
     
     const iconStyle = `
       font-size: 28px;
       flex-shrink: 0;
       margin-top: 2px;
     `;
-    notification.querySelector('.scamshield-qr-notification-icon').style.cssText = iconStyle;
+    notification.querySelector('.scamshield-link-notification-icon').style.cssText = iconStyle;
     
     const bodyStyle = `
       flex: 1;
       min-width: 0;
     `;
-    notification.querySelector('.scamshield-qr-notification-body').style.cssText = bodyStyle;
+    notification.querySelector('.scamshield-link-notification-body').style.cssText = bodyStyle;
     
     const titleStyle = `
       font-size: 15px;
       font-weight: bold;
       margin-bottom: 4px;
     `;
-    notification.querySelector('.scamshield-qr-notification-title').style.cssText = titleStyle;
+    notification.querySelector('.scamshield-link-notification-title').style.cssText = titleStyle;
     
     const messageStyle = `
       font-size: 13px;
       color: #e0e0f0;
       margin-bottom: 6px;
     `;
-    notification.querySelector('.scamshield-qr-notification-message').style.cssText = messageStyle;
+    notification.querySelector('.scamshield-link-notification-message').style.cssText = messageStyle;
     
     const linksStyle = `
       margin: 8px 0;
@@ -185,11 +185,11 @@ function showQRNotification(qrData, status = 'scanning') {
       background: rgba(255,255,255,0.05);
       border-radius: 6px;
     `;
-    const linksContainer = notification.querySelector('.scamshield-qr-links');
+    const linksContainer = notification.querySelector('.scamshield-links');
     if (linksContainer) {
       linksContainer.style.cssText = linksStyle;
       
-      const linkItems = linksContainer.querySelectorAll('.scamshield-qr-link');
+      const linkItems = linksContainer.querySelectorAll('.scamshield-link');
       linkItems.forEach(item => {
         item.style.cssText = `
           display: flex;
@@ -201,7 +201,7 @@ function showQRNotification(qrData, status = 'scanning') {
         `;
       });
       
-      const linkUrls = linksContainer.querySelectorAll('.scamshield-qr-link-url');
+      const linkUrls = linksContainer.querySelectorAll('.scamshield-link-url');
       linkUrls.forEach(url => {
         url.style.cssText = `
           flex: 1;
@@ -210,7 +210,7 @@ function showQRNotification(qrData, status = 'scanning') {
         `;
       });
       
-      const linkStatuses = linksContainer.querySelectorAll('.scamshield-qr-link-status');
+      const linkStatuses = linksContainer.querySelectorAll('.scamshield-link-status');
       linkStatuses.forEach(status => {
         status.style.cssText = `
           font-weight: bold;
@@ -220,7 +220,7 @@ function showQRNotification(qrData, status = 'scanning') {
       });
     }
     
-    const closeBtn = notification.querySelector('.scamshield-qr-notification-close');
+    const closeBtn = notification.querySelector('.scamshield-link-notification-close');
     closeBtn.style.cssText = `
       background: none;
       border: none;
@@ -244,9 +244,9 @@ function showQRNotification(qrData, status = 'scanning') {
       removeNotification(notification);
     }, timeout);
     
-    if (!document.getElementById('scamshield-qr-styles')) {
+    if (!document.getElementById('scamshield-link-styles')) {
       const style = document.createElement('style');
-      style.id = 'scamshield-qr-styles';
+      style.id = 'scamshield-link-styles';
       style.textContent = `
         @keyframes slideInRight {
           from {
@@ -268,14 +268,14 @@ function showQRNotification(qrData, status = 'scanning') {
             opacity: 0;
           }
         }
-        .scamshield-qr-notification::-webkit-scrollbar {
+        .scamshield-link-notification::-webkit-scrollbar {
           width: 4px;
         }
-        .scamshield-qr-notification::-webkit-scrollbar-track {
+        .scamshield-link-notification::-webkit-scrollbar-track {
           background: rgba(255,255,255,0.05);
           border-radius: 2px;
         }
-        .scamshield-qr-notification::-webkit-scrollbar-thumb {
+        .scamshield-link-notification::-webkit-scrollbar-thumb {
           background: ${color};
           border-radius: 2px;
         }
@@ -284,7 +284,7 @@ function showQRNotification(qrData, status = 'scanning') {
     }
     
   } catch (error) {
-    console.error('Error showing QR notification:', error);
+    console.error('Error showing link notification:', error);
   }
 }
 
@@ -304,139 +304,56 @@ function extractAllLinks(text) {
   const urlRegex = /(?:https?:\/\/)?(?:www\.)?[a-zA-Z0-9][a-zA-Z0-9-]+\.[a-zA-Z]{2,}(?:\/[^\s]*)?/gi;
   const matches = text.match(urlRegex) || [];
   
-  // Also check for .onelink.me and similar shortened domains
-  const shortenerRegex = /(?:https?:\/\/)?(?:[a-zA-Z0-9-]+\.)?(?:onelink\.me|link\.me|short\.link|shorturl|tinyurl|bit\.ly|goo\.gl|ow\.ly|is\.gd|buff\.ly|qr\.co|qrs\.ly)[\/\w.-]*/gi;
+  // Also check for shortened domains
+  const shortenerRegex = /(?:https?:\/\/)?(?:[a-zA-Z0-9-]+\.)?(?:onelink\.me|link\.me|short\.link|shorturl|tinyurl|bit\.ly|goo\.gl|ow\.ly|is\.gd|buff\.ly|qr\.co|qrs\.ly|cutt\.ly|rb\.gy|viral\.link)[\/\w.-]*/gi;
   const shortenerMatches = text.match(shortenerRegex) || [];
   
   // Combine and deduplicate
   const allLinks = [...matches, ...shortenerMatches];
-  return [...new Set(allLinks)];
-}
-
-function extractQRLinks(text) {
-  // First, check if text contains QR-related keywords
-  const qrKeywords = [
-    'qr', 'qrcode', 'scan', 'bitmap', 
-    '二维码', '扫描', '扫一扫',
-    'onelink', 'link', 'click', 'tap'
-  ];
+  const uniqueLinks = [...new Set(allLinks)];
   
-  const textLower = text.toLowerCase();
-  let hasQRContext = false;
-  for (const keyword of qrKeywords) {
-    if (textLower.includes(keyword)) {
-      hasQRContext = true;
-      console.log(`📱 Found QR context keyword: "${keyword}"`);
-      break;
-    }
-  }
-  
-  if (!hasQRContext) {
-    return [];
-  }
-  
-  // Extract all links from the text
-  const allLinks = extractAllLinks(text);
-  
-  // Filter links that are likely QR-related
-  const qrLinks = allLinks.filter(link => {
-    const linkLower = link.toLowerCase();
-    // Check if link contains QR indicators or is a shortener
-    return linkLower.includes('qr') || 
-           linkLower.includes('onelink') ||
-           linkLower.includes('bit.ly') ||
-           linkLower.includes('tinyurl') ||
-           linkLower.includes('goo.gl') ||
-           linkLower.includes('short') ||
-           linkLower.includes('link') ||
-           linkLower.includes('click') ||
-           linkLower.includes('tap') ||
-           /^[a-zA-Z0-9-]+\.(?:me|ly|co|io|link|click|tap)/.test(linkLower);
+  // Filter out common social media profile links (optional)
+  const filteredLinks = uniqueLinks.filter(link => {
+    const lowerLink = link.toLowerCase();
+    // Keep links that are not just profile references
+    return !lowerLink.startsWith('@') && 
+           !lowerLink.startsWith('#') &&
+           !lowerLink.includes('twitter.com') && 
+           !lowerLink.includes('facebook.com') &&
+           !lowerLink.includes('x.com') &&
+           !lowerLink.includes('instagram.com') &&
+           !lowerLink.includes('tiktok.com') &&
+           !lowerLink.includes('youtube.com') &&
+           !lowerLink.includes('linkedin.com') &&
+           !lowerLink.includes('fb.com');
   });
   
-  console.log(`📱 Found ${qrLinks.length} QR-related links:`, qrLinks);
-  return qrLinks;
+  return filteredLinks;
 }
 
-function checkForQRCodeText(text) {
-  const qrPatterns = [
-    /qr\s*code/i, /scan\s*this\s*qr/i, /qr\s*scan/i,
-    /qr\s*payment/i, /gcash\s*qr/i, /paymaya\s*qr/i,
-    /scan\s*to\s*pay/i, /qr\s*transfer/i, /bitmap/i,
-    /qrcode/i, /scan.*code/i, /grab.*qr/i, /foodpanda.*qr/i,
-    /scan\s*to\s*win/i, /qr\s*lottery/i, /qr\s*promo/i,
-    /scan\s*to\s*claim/i, /pay\s*via\s*qr/i, /send\s*payment/i,
-    /click.*link/i, /tap.*link/i, /onelink/i,
-    /二维码/i, /扫描二维码/i, /扫一扫/i, /支付二维码/i, /收款码/i, /付款码/i
-  ];
-  
-  const textLower = text.toLowerCase();
-  for (const pattern of qrPatterns) {
-    if (pattern.test(textLower)) {
-      return true;
-    }
-  }
-  return false;
-}
-
-async function processQRLinks(text, element) {
+async function processLinks(text, element) {
   try {
-    const hasQRText = checkForQRCodeText(text);
-    const qrLinks = extractQRLinks(text);
+    // Extract ALL links from the text
+    const allLinks = extractAllLinks(text);
     
-    // Process if there are QR links OR QR text context
-    if (qrLinks.length > 0 || hasQRText) {
-      console.log(`📱 QR content detected! Text: ${hasQRText}, Links: ${qrLinks.length}`);
+    // Only process if there are links
+    if (allLinks.length > 0) {
+      console.log(`🔗 Found ${allLinks.length} link(s) in post:`, allLinks);
       
-      // If no links but has QR text, still show notification
-      if (qrLinks.length === 0 && hasQRText) {
-        const qrData = {
-          total: 1,
-          links: [],
-          postText: text.substring(0, 100)
-        };
-        showQRNotification(qrData, 'scanning');
-        
-        // Send the text for scam detection
-        const response = await chrome.runtime.sendMessage({
-          action: 'detectText',
-          text: text,
-          url: window.location.href,
-          platform: detectPlatform(),
-          account_age: 365,
-          posting_frequency: 1,
-          type: 'qr'
-        });
-        
-        setTimeout(() => {
-          const existingNotifs = document.querySelectorAll('.scamshield-qr-notification');
-          existingNotifs.forEach(n => n.remove());
-          
-          const isScam = response && response.verdict === 'SCAM';
-          const resultData = {
-            total: 1,
-            links: [],
-            postText: text.substring(0, 100)
-          };
-          showQRNotification(resultData, isScam ? 'failed' : 'success');
-        }, 1500);
-        
-        return true;
-      }
-      
-      const qrData = {
-        total: qrLinks.length,
+      const linkData = {
+        total: allLinks.length,
         links: [],
         postText: '' 
       };
       
-      showQRNotification(qrData, 'scanning');
+      // Show scanning notification
+      showLinkNotification(linkData, 'scanning');
       
       let hasScam = false;
       
-      for (const link of qrLinks) {
+      for (const link of allLinks) {
         try {
-          console.log(`🔍 Scanning QR link: ${link}`);
+          console.log(`🔍 Scanning link: ${link}`);
           
           const response = await chrome.runtime.sendMessage({
             action: 'detectText',
@@ -445,12 +362,12 @@ async function processQRLinks(text, element) {
             platform: detectPlatform(),
             account_age: 365,
             posting_frequency: 1,
-            type: 'qr'
+            type: 'link'
           });
           
           const isScam = response && response.verdict === 'SCAM';
           
-          qrData.links.push({
+          linkData.links.push({
             url: link,
             status: isScam ? 'failed' : 'success',
             verdict: response ? response.verdict : 'UNKNOWN',
@@ -459,14 +376,14 @@ async function processQRLinks(text, element) {
           
           if (isScam) {
             hasScam = true;
-            console.log(`⚠️ QR link detected as scam: ${link}`);
+            console.log(`⚠️ Link detected as scam: ${link}`);
           } else {
-            console.log(`✅ QR link verified safe: ${link}`);
+            console.log(`✅ Link verified safe: ${link}`);
           }
           
         } catch (error) {
-          console.error(`Error scanning QR link ${link}:`, error);
-          qrData.links.push({
+          console.error(`Error scanning link ${link}:`, error);
+          linkData.links.push({
             url: link,
             status: 'failed',
             error: error.message
@@ -475,11 +392,12 @@ async function processQRLinks(text, element) {
         }
       }
       
+      // Update notification with results
       setTimeout(() => {
-        const existingNotifs = document.querySelectorAll('.scamshield-qr-notification');
+        const existingNotifs = document.querySelectorAll('.scamshield-link-notification');
         existingNotifs.forEach(n => n.remove());
         
-        showQRNotification(qrData, hasScam ? 'failed' : 'success');
+        showLinkNotification(linkData, hasScam ? 'failed' : 'success');
       }, 1500);
       
       return true;
@@ -487,7 +405,7 @@ async function processQRLinks(text, element) {
     
     return false;
   } catch (error) {
-    console.error('Error processing QR links:', error);
+    console.error('Error processing links:', error);
     return false;
   }
 }
@@ -750,8 +668,10 @@ async function analyzePost(text, element) {
   try {
     const platform = detectPlatform();
     
-    await processQRLinks(text, element);
+    // Process ALL links in the post
+    await processLinks(text, element);
     
+    // Send to API for scam detection
     const response = await chrome.runtime.sendMessage({
       action: 'detectText',
       text: text,
@@ -786,7 +706,7 @@ function clearHighlights() {
     img.style.outline = '';
   });
   
-  document.querySelectorAll('.scamshield-qr-notification').forEach(n => n.remove());
+  document.querySelectorAll('.scamshield-link-notification').forEach(n => n.remove());
   activeNotifications = [];
 }
 
