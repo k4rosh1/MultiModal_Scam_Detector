@@ -299,27 +299,63 @@ function removeNotification(notification) {
   }, 300);
 }
 
+function extractAllLinks(text) {
+  // Extract ALL URLs from text
+  const urlRegex = /(?:https?:\/\/)?(?:www\.)?[a-zA-Z0-9][a-zA-Z0-9-]+\.[a-zA-Z]{2,}(?:\/[^\s]*)?/gi;
+  const matches = text.match(urlRegex) || [];
+  
+  // Also check for .onelink.me and similar shortened domains
+  const shortenerRegex = /(?:https?:\/\/)?(?:[a-zA-Z0-9-]+\.)?(?:onelink\.me|link\.me|short\.link|shorturl|tinyurl|bit\.ly|goo\.gl|ow\.ly|is\.gd|buff\.ly|qr\.co|qrs\.ly)[\/\w.-]*/gi;
+  const shortenerMatches = text.match(shortenerRegex) || [];
+  
+  // Combine and deduplicate
+  const allLinks = [...matches, ...shortenerMatches];
+  return [...new Set(allLinks)];
+}
+
 function extractQRLinks(text) {
-  const urlPatterns = [
-    /(?:https?:\/\/)?(?:www\.)?(?:appurl\.io|bit\.ly|tinyurl|qr\.co|qrs\.ly|qrurl|qrlink|qr-code|qrcode|scanqr)[\/\w.-]+/gi,
-    /(?:https?:\/\/)?(?:www\.)?[\w-]+\.(?:io|ly|co|me|link|click|qr)[\/\w.-]*/gi
+  // First, check if text contains QR-related keywords
+  const qrKeywords = [
+    'qr', 'qrcode', 'scan', 'bitmap', 
+    '二维码', '扫描', '扫一扫',
+    'onelink', 'link', 'click', 'tap'
   ];
   
-  const links = [];
-  for (const pattern of urlPatterns) {
-    const matches = text.match(pattern);
-    if (matches) {
-      for (const match of matches) {
-        if (match.toLowerCase().includes('qr') || 
-            match.toLowerCase().includes('bit.ly') || 
-            match.toLowerCase().includes('tinyurl') ||
-            match.toLowerCase().includes('appurl.io')) {
-          links.push(match);
-        }
-      }
+  const textLower = text.toLowerCase();
+  let hasQRContext = false;
+  for (const keyword of qrKeywords) {
+    if (textLower.includes(keyword)) {
+      hasQRContext = true;
+      console.log(`📱 Found QR context keyword: "${keyword}"`);
+      break;
     }
   }
-  return links;
+  
+  if (!hasQRContext) {
+    return [];
+  }
+  
+  // Extract all links from the text
+  const allLinks = extractAllLinks(text);
+  
+  // Filter links that are likely QR-related
+  const qrLinks = allLinks.filter(link => {
+    const linkLower = link.toLowerCase();
+    // Check if link contains QR indicators or is a shortener
+    return linkLower.includes('qr') || 
+           linkLower.includes('onelink') ||
+           linkLower.includes('bit.ly') ||
+           linkLower.includes('tinyurl') ||
+           linkLower.includes('goo.gl') ||
+           linkLower.includes('short') ||
+           linkLower.includes('link') ||
+           linkLower.includes('click') ||
+           linkLower.includes('tap') ||
+           /^[a-zA-Z0-9-]+\.(?:me|ly|co|io|link|click|tap)/.test(linkLower);
+  });
+  
+  console.log(`📱 Found ${qrLinks.length} QR-related links:`, qrLinks);
+  return qrLinks;
 }
 
 function checkForQRCodeText(text) {
@@ -330,7 +366,7 @@ function checkForQRCodeText(text) {
     /qrcode/i, /scan.*code/i, /grab.*qr/i, /foodpanda.*qr/i,
     /scan\s*to\s*win/i, /qr\s*lottery/i, /qr\s*promo/i,
     /scan\s*to\s*claim/i, /pay\s*via\s*qr/i, /send\s*payment/i,
-    /click.*qr/i, /download.*qr/i, /install.*qr/i,
+    /click.*link/i, /tap.*link/i, /onelink/i,
     /二维码/i, /扫描二维码/i, /扫一扫/i, /支付二维码/i, /收款码/i, /付款码/i
   ];
   
@@ -348,9 +384,45 @@ async function processQRLinks(text, element) {
     const hasQRText = checkForQRCodeText(text);
     const qrLinks = extractQRLinks(text);
     
-    // Only process if there are QR links
-    if (qrLinks.length > 0) {
-      console.log(`📱 QR content detected! Links: ${qrLinks.length}`);
+    // Process if there are QR links OR QR text context
+    if (qrLinks.length > 0 || hasQRText) {
+      console.log(`📱 QR content detected! Text: ${hasQRText}, Links: ${qrLinks.length}`);
+      
+      // If no links but has QR text, still show notification
+      if (qrLinks.length === 0 && hasQRText) {
+        const qrData = {
+          total: 1,
+          links: [],
+          postText: text.substring(0, 100)
+        };
+        showQRNotification(qrData, 'scanning');
+        
+        // Send the text for scam detection
+        const response = await chrome.runtime.sendMessage({
+          action: 'detectText',
+          text: text,
+          url: window.location.href,
+          platform: detectPlatform(),
+          account_age: 365,
+          posting_frequency: 1,
+          type: 'qr'
+        });
+        
+        setTimeout(() => {
+          const existingNotifs = document.querySelectorAll('.scamshield-qr-notification');
+          existingNotifs.forEach(n => n.remove());
+          
+          const isScam = response && response.verdict === 'SCAM';
+          const resultData = {
+            total: 1,
+            links: [],
+            postText: text.substring(0, 100)
+          };
+          showQRNotification(resultData, isScam ? 'failed' : 'success');
+        }, 1500);
+        
+        return true;
+      }
       
       const qrData = {
         total: qrLinks.length,
@@ -367,32 +439,37 @@ async function processQRLinks(text, element) {
           console.log(`🔍 Scanning QR link: ${link}`);
           
           const response = await chrome.runtime.sendMessage({
-            action: 'detectQR',
-            url: link,
+            action: 'detectText',
             text: text,
-            platform: detectPlatform()
+            url: link,
+            platform: detectPlatform(),
+            account_age: 365,
+            posting_frequency: 1,
+            type: 'qr'
           });
           
-          if (response && response.success) {
-            const isScam = response.isScam || false;
-            qrData.links.push({
-              url: link,
-              status: isScam ? 'failed' : 'success'
-            });
-            if (isScam) hasScam = true;
-            console.log(`✅ QR link scan ${isScam ? 'failed (scam)' : 'successful'}: ${link}`);
-          } else {
-            qrData.links.push({
-              url: link,
-              status: 'failed'
-            });
+          const isScam = response && response.verdict === 'SCAM';
+          
+          qrData.links.push({
+            url: link,
+            status: isScam ? 'failed' : 'success',
+            verdict: response ? response.verdict : 'UNKNOWN',
+            confidence: response ? response.confidence : 0
+          });
+          
+          if (isScam) {
             hasScam = true;
+            console.log(`⚠️ QR link detected as scam: ${link}`);
+          } else {
+            console.log(`✅ QR link verified safe: ${link}`);
           }
+          
         } catch (error) {
           console.error(`Error scanning QR link ${link}:`, error);
           qrData.links.push({
             url: link,
-            status: 'failed'
+            status: 'failed',
+            error: error.message
           });
           hasScam = true;
         }
@@ -403,7 +480,7 @@ async function processQRLinks(text, element) {
         existingNotifs.forEach(n => n.remove());
         
         showQRNotification(qrData, hasScam ? 'failed' : 'success');
-      }, 1000);
+      }, 1500);
       
       return true;
     }
@@ -420,7 +497,6 @@ function highlightScamPost(element, verdict) {
   try {
     if (!element) return;
     
-    // Find the post container
     const postContainer = element.closest('[role="article"]') || 
                          element.closest('[data-testid="tweet"]') || 
                          element.closest('[role="article"]') || 
@@ -428,16 +504,13 @@ function highlightScamPost(element, verdict) {
     
     if (!postContainer) return;
     
-    // Remove existing highlight
     postContainer.style.outline = '';
     postContainer.style.backgroundColor = '';
     
-    // Only highlight if it's a scam
     if (verdict === 'SCAM') {
       postContainer.style.outline = '3px solid #ff4444';
       postContainer.style.backgroundColor = 'rgba(255, 68, 68, 0.05)';
       
-      // Add scam badge
       const existingBadge = postContainer.querySelector('.scamshield-badge');
       if (!existingBadge) {
         const badge = document.createElement('div');
@@ -677,10 +750,8 @@ async function analyzePost(text, element) {
   try {
     const platform = detectPlatform();
     
-    // Process QR links first (just for notification)
     await processQRLinks(text, element);
     
-    // ALWAYS send to API for scam detection
     const response = await chrome.runtime.sendMessage({
       action: 'detectText',
       text: text,
@@ -695,7 +766,6 @@ async function analyzePost(text, element) {
       scannedPosts.set(element, response);
       console.log(`✅ Result: ${response.verdict} (${response.confidence})`);
       
-      // Highlight the post if it's a scam
       if (response.verdict === 'SCAM') {
         highlightScamPost(element, response.verdict);
       }
