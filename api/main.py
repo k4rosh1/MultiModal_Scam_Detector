@@ -422,30 +422,108 @@ SOCIAL_PATTERNS = {
     'youtube':  [r'youtube\.com', r'youtu\.be'],
 }
 
+def _upscale_if_small(img, min_dim: int = 400):
+    """Upscale small images — OpenCV's/zbar's QR detectors are much more
+    reliable on QR codes that are at least a few hundred pixels across.
+    Many QR codes from free online generators are exported tiny (~150px)."""
+    h, w = img.shape[:2]
+    scale = max(1.0, min_dim / min(h, w))
+    if scale > 1.0:
+        img = cv2.resize(img, (int(w * scale), int(h * scale)), interpolation=cv2.INTER_CUBIC)
+    return img
+
+
+def _decode_with_pyzbar(img) -> str:
+    """Try decoding with pyzbar (libzbar) — significantly more robust than
+    OpenCV's built-in QRCodeDetector, especially for small/low-contrast/
+    tightly-cropped QR codes from third-party generators."""
+    try:
+        from pyzbar.pyzbar import decode as zbar_decode
+    except ImportError:
+        return ""
+
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+
+    # Attempt 1: raw grayscale
+    results = zbar_decode(gray)
+    if results:
+        return results[0].data.decode("utf-8", errors="ignore").strip()
+
+    # Attempt 2: contrast-enhanced
+    enhanced = cv2.equalizeHist(gray)
+    results = zbar_decode(enhanced)
+    if results:
+        return results[0].data.decode("utf-8", errors="ignore").strip()
+
+    # Attempt 3: binary threshold (helps with low-contrast / off-white backgrounds)
+    _, thresh = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    results = zbar_decode(thresh)
+    if results:
+        return results[0].data.decode("utf-8", errors="ignore").strip()
+
+    return ""
+
+
+def _decode_with_opencv(img) -> str:
+    """Fallback decoder using OpenCV's built-in QRCodeDetector."""
+    detector = cv2.QRCodeDetector()
+
+    data, bbox, _ = detector.detectAndDecode(img)
+    if data:
+        return data.strip()
+
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    enhanced = cv2.equalizeHist(gray)
+    data, bbox, _ = detector.detectAndDecode(cv2.cvtColor(enhanced, cv2.COLOR_GRAY2BGR))
+    if data:
+        return data.strip()
+
+    return ""
+
+
 def decode_qr_from_image(image_bytes: bytes) -> str:
-    """Decode QR code from image bytes using OpenCV. Returns the decoded string."""
+    """Decode QR code from image bytes. Returns the decoded string.
+
+    Uses pyzbar (libzbar) as the primary decoder since it is far more
+    tolerant of small, low-contrast, or tightly-cropped QR images (common
+    with free online QR generators), falling back to OpenCV's built-in
+    QRCodeDetector if pyzbar is unavailable or fails.
+    """
     # Convert bytes to numpy array
     nparr = np_cv.frombuffer(image_bytes, np_cv.uint8)
     img   = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
     if img is None:
         raise ValueError("Could not read image. Make sure it is a valid image file (PNG, JPG, etc.).")
 
-    # Try standard QR decode first
-    detector = cv2.QRCodeDetector()
-    data, bbox, _ = detector.detectAndDecode(img)
+    img = _upscale_if_small(img)
 
+    # Try pyzbar first — most robust
+    data = _decode_with_pyzbar(img)
     if data:
-        return data.strip()
+        return data
 
-    # Retry with grayscale + contrast enhancement
-    gray      = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-    enhanced  = cv2.equalizeHist(gray)
-    data, bbox, _ = detector.detectAndDecode(cv2.cvtColor(enhanced, cv2.COLOR_GRAY2BGR))
-
+    # Fall back to OpenCV's detector
+    data = _decode_with_opencv(img)
     if data:
-        return data.strip()
+        return data
 
     raise ValueError("No QR code detected in this image. Make sure the image is clear and the QR code is fully visible.")
+
+def _resolve_final_url(url: str, timeout: float = 5.0) -> str:
+    """Follow redirects (shorteners, QR tracking links like me-qr.com, bit.ly,
+    etc.) to find the final destination URL. Returns the original URL
+    unchanged if resolution fails for any reason — never raises."""
+    try:
+        headers = {'User-Agent': 'Mozilla/5.0 (compatible; ScamShieldBot/1.0)'}
+        resp = http_requests.head(url, headers=headers, timeout=timeout, allow_redirects=True)
+        # Some servers don't support HEAD properly (405/403) — retry with GET
+        if resp.status_code >= 400 or resp.url == url:
+            resp = http_requests.get(url, headers=headers, timeout=timeout, allow_redirects=True, stream=True)
+            resp.close()
+        return resp.url or url
+    except Exception:
+        return url
+
 
 def classify_qr_content(content: str) -> dict:
     """
@@ -468,6 +546,15 @@ def classify_qr_content(content: str) -> dict:
             'url':        None,
         }
 
+    # ── Resolve redirects/shorteners (e.g. me-qr.com, bit.ly, tinyurl) ────────
+    # QR codes very commonly encode a tracking/redirect link rather than the
+    # final destination. We resolve it first so classification and content
+    # extraction reflect where it actually leads, not the shortener itself.
+    original_content = content
+    resolved_url = _resolve_final_url(content)
+    used_redirect = resolved_url != original_content
+    content = resolved_url
+
     # ── It is a URL — parse it ────────────────────────────────────────────────
     try:
         parsed = urlparse(content if content.startswith('http') else 'https://' + content)
@@ -478,6 +565,8 @@ def classify_qr_content(content: str) -> dict:
         path   = ''
         ext    = ''
 
+    redirect_note = f' (resolved from shortener/redirect: {original_content})' if used_redirect else ''
+
     # ── Check if URL points directly to a media file ──────────────────────────
     if ext in MEDIA_EXTENSIONS:
         return {
@@ -485,50 +574,114 @@ def classify_qr_content(content: str) -> dict:
             'platform':  'qr',
             'is_media':  True,
             'scan_text': None,
-            'note':      f'This QR code links directly to a media file ({ext}). There is no text content to scan for scams.',
+            'note':      f'This QR code links directly to a media file ({ext}){redirect_note}. There is no text content to scan for scams.',
             'url':       content,
+            'original_url': original_content,
+            'used_redirect': used_redirect,
         }
 
-    # ── Check if URL is a social media link ───────────────────────────────────
+    # ── Check if URL is a recognized social media link ────────────────────────
+    matched_platform = None
     for platform_name, patterns in SOCIAL_PATTERNS.items():
         for pattern in patterns:
             if re.search(pattern, content, re.IGNORECASE):
-                # Try to extract post caption from page meta tags
-                caption = _try_extract_social_caption(content)
-                if caption:
-                    return {
-                        'type':      'social_media_url',
-                        'platform':  platform_name,
-                        'is_media':  False,
-                        'scan_text': caption,
-                        'note':      f'Social media link detected ({platform_name.capitalize()}). Post caption extracted from page.',
-                        'url':       content,
-                    }
-                else:
-                    # Fall back to scanning the URL text itself
-                    return {
-                        'type':      'social_media_url',
-                        'platform':  platform_name,
-                        'is_media':  False,
-                        'scan_text': content,
-                        'note':      f'Social media link detected ({platform_name.capitalize()}). Caption could not be extracted — scanning URL text instead.',
-                        'url':       content,
-                    }
+                matched_platform = platform_name
+                break
+        if matched_platform:
+            break
 
-    # ── Generic URL — scan the URL text itself ────────────────────────────────
+    # ── Extract page content (title / description) for ANY URL ────────────────
+    # Not just recognized social platforms — plain scam/phishing pages are
+    # just as important to analyze based on real page content rather than
+    # the bare URL string.
+    extracted = _extract_page_text(content)
+
+    if matched_platform:
+        if extracted:
+            return {
+                'type':      'social_media_url',
+                'platform':  matched_platform,
+                'is_media':  False,
+                'scan_text': extracted,
+                'note':      f'Social media link detected ({matched_platform.capitalize()}){redirect_note}. Post caption extracted from page.',
+                'url':       content,
+                'original_url': original_content,
+                'used_redirect': used_redirect,
+            }
+        else:
+            return {
+                'type':      'social_media_url',
+                'platform':  matched_platform,
+                'is_media':  False,
+                'scan_text': content,
+                'note':      f'Social media link detected ({matched_platform.capitalize()}){redirect_note}. Caption could not be extracted — scanning URL text instead.',
+                'url':       content,
+                'original_url': original_content,
+                'used_redirect': used_redirect,
+            }
+
+    # ── Generic URL — use extracted page content if available, else the URL ──
     return {
         'type':      'url',
         'platform':  'qr',
         'is_media':  False,
-        'scan_text': content,
-        'note':      'URL extracted from QR code. Scanning URL text for scam indicators.',
+        'scan_text': extracted if extracted else content,
+        'note':      (f'URL extracted from QR code{redirect_note}. '
+                      + ('Page content extracted and scanned for scam indicators.' if extracted
+                         else 'Could not extract page content — scanning URL text instead.')),
         'url':       content,
+        'original_url': original_content,
+        'used_redirect': used_redirect,
     }
 
-def _try_extract_social_caption(url: str) -> str | None:
+import html as _html_module  # for unescaping HTML entities
+
+# Boilerplate signals — QR-hosting/redirect services (me-qr.com and similar
+# "QR code as a service" sites) reuse the same generic meta description for
+# every dynamically-hosted page. When a description matches this pattern, we
+# treat it as unreliable and prefer the page's actual visible body text,
+# which is where the real encoded content (e.g. a "text"-type QR's payload)
+# usually lives instead.
+_BOILERPLATE_META_HINTS = (
+    'qr code generator', 'make qr code', 'create qr code', 'scan qr code',
+    'making free qr', 'qr codes online', 'free qr code',
+)
+
+
+def _looks_like_boilerplate(text: str) -> bool:
+    t = text.lower()
+    return any(hint in t for hint in _BOILERPLATE_META_HINTS)
+
+
+def _extract_body_text(html_src: str, max_len: int = 1000) -> str | None:
+    """Strip scripts/styles/nav/header/footer and pull the visible text left
+    in <body>. This is what catches content on pages (like me-qr's 'text'
+    QR display pages) where the real payload lives in the body, not in any
+    meta tag."""
+    # Isolate <body> if present
+    body_match = re.search(r'<body[^>]*>(.*?)</body>', html_src, re.IGNORECASE | re.DOTALL)
+    body = body_match.group(1) if body_match else html_src
+
+    # Remove non-content elements entirely (including their inner text)
+    body = re.sub(r'<(script|style|noscript|nav|header|footer)[^>]*>.*?</\1>', ' ', body, flags=re.IGNORECASE | re.DOTALL)
+
+    # Strip remaining tags
+    text = re.sub(r'<[^>]+>', ' ', body)
+    text = _html_module.unescape(text)
+    text = re.sub(r'\s+', ' ', text).strip()
+
+    return text[:max_len] if text else None
+
+
+def _extract_page_text(url: str) -> str | None:
     """
-    Attempt to extract post caption from a social media URL via Open Graph meta tags.
-    Returns the caption string if found, None otherwise.
+    Fetch a URL and extract representative text for scam analysis.
+    Tries Open Graph description / meta description / <title> first (works
+    well for standard social platforms), but falls back to — or overrides
+    with — the page's actual visible body text when those meta fields look
+    like generic site boilerplate rather than real content (common on
+    QR-hosting/redirect services that dynamically display arbitrary text
+    or links behind a templated page).
     Fails silently — never crashes the main flow.
     """
     try:
@@ -538,17 +691,38 @@ def _try_extract_social_caption(url: str) -> str | None:
         resp = http_requests.get(url, headers=headers, timeout=5, allow_redirects=True)
         if resp.status_code != 200:
             return None
-        html = resp.text
+        html_src = resp.text
 
-        # Try og:description first (most social platforms use this for post text)
-        og_desc = re.search(r"""<meta[^>]+property=["'](og:description)["'][^>]+content=["'](.*?)["']""", html, re.IGNORECASE | re.DOTALL)
+        meta_candidate = None
+
+        og_desc = re.search(r"""<meta[^>]+property=["'](og:description)["'][^>]+content=["'](.*?)["']""", html_src, re.IGNORECASE | re.DOTALL)
         if og_desc and og_desc.group(2).strip():
-            return og_desc.group(2).strip()[:1000]
+            meta_candidate = _html_module.unescape(og_desc.group(2).strip())[:1000]
 
-        # Fallback: meta description
-        meta_desc = re.search(r"""<meta[^>]+name=["'](description)["'][^>]+content=["'](.*?)["']""", html, re.IGNORECASE | re.DOTALL)
-        if meta_desc and meta_desc.group(2).strip():
-            return meta_desc.group(2).strip()[:1000]
+        if not meta_candidate:
+            meta_desc = re.search(r"""<meta[^>]+name=["'](description)["'][^>]+content=["'](.*?)["']""", html_src, re.IGNORECASE | re.DOTALL)
+            if meta_desc and meta_desc.group(2).strip():
+                meta_candidate = _html_module.unescape(meta_desc.group(2).strip())[:1000]
+
+        # If the meta description looks like generic QR-service boilerplate,
+        # don't trust it — try to pull the real content from the body instead.
+        if meta_candidate and not _looks_like_boilerplate(meta_candidate):
+            return meta_candidate
+
+        body_text = _extract_body_text(html_src)
+        if body_text and not _looks_like_boilerplate(body_text):
+            return body_text
+
+        # Nothing better found — fall back to whatever we have
+        if meta_candidate:
+            return meta_candidate
+        if body_text:
+            return body_text
+
+        # Last resort: <title> tag
+        title = re.search(r"""<title[^>]*>(.*?)</title>""", html_src, re.IGNORECASE | re.DOTALL)
+        if title and title.group(1).strip():
+            return _html_module.unescape(title.group(1).strip())[:1000]
 
         return None
     except Exception:
@@ -610,6 +784,8 @@ async def scan_qr(request: Request, file: UploadFile = File(...)):
             "content_type": classified["type"],
             "platform":    "qr",
             "note":        classified["note"],
+            "resolved_url": classified.get("url"),
+            "used_redirect": classified.get("used_redirect", False),
             "rejected":    True,
             "verdict":     None,
             "risk_score":  None,
@@ -633,6 +809,8 @@ async def scan_qr(request: Request, file: UploadFile = File(...)):
             "platform":     classified["platform"],
             "note":         classified["note"],
             "url":          classified.get("url"),
+            "original_url": classified.get("original_url"),
+            "used_redirect": classified.get("used_redirect", False),
             "scan_text":    scan_text,
             "rejected":     False,
             "is_duplicate": True,
@@ -669,6 +847,8 @@ async def scan_qr(request: Request, file: UploadFile = File(...)):
         "platform":     classified["platform"],
         "note":         classified["note"],
         "url":          classified.get("url"),
+        "original_url": classified.get("original_url"),
+        "used_redirect": classified.get("used_redirect", False),
         "scan_text":    scan_text,
         "rejected":     False,
         "is_duplicate": False,

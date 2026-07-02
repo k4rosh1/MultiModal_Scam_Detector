@@ -9,5 +9,6 @@ joblib
 cryptography
 slowapi
 opencv-python-headless
+pyzbar
 Pillow
 requests

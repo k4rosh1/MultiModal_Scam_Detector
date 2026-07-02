@@ -52,7 +52,7 @@ print(f"Using device: {DEVICE}")
 
 # ── STEP 1: LOAD DATASET ──────────────────────────────────────────────────────
 print("\n[1/8] Loading dataset...")
-df = pd.read_csv("scam_dataset.csv")
+df = pd.read_csv("merged_real_dataset.csv")
 print(f"   Total samples: {len(df)}  |  Scam: {df['label'].sum()}  |  Legit: {(df['label']==0).sum()}")
 
 # Separate text, metadata, and labels
