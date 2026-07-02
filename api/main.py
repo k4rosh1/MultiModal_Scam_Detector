@@ -9,7 +9,15 @@
 #   uvicorn main:app --reload --host 0.0.0.0 --port 8000
 #
 # First-time setup — generate encryption key:
-#   python -c "from cryptography.fernet import Fernet; print(Fernet.generate_key().decode())"
+#   python -c "from cryptography.fernet import Fernet
+import re
+import io
+import cv2
+import numpy as np_cv  # alias to avoid conflict with existing numpy as np
+import requests as http_requests
+from PIL import Image
+from urllib.parse import urlparse
+from fastapi import UploadFile, File, HTTPException
 #   Copy the output into a file called  api/.env  as:
 #   DB_ENCRYPTION_KEY=<paste key here>
 # =============================================================================
@@ -31,6 +39,14 @@ from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from cryptography.fernet import Fernet
+import re
+import io
+import cv2
+import numpy as np_cv  # alias to avoid conflict with existing numpy as np
+import requests as http_requests
+from PIL import Image
+from urllib.parse import urlparse
+from fastapi import UploadFile, File, HTTPException
 
 # ── CONFIG ────────────────────────────────────────────────────────────────────
 MOCK_MODE  = False
@@ -387,6 +403,157 @@ def real_predict(req: PredictRequest) -> dict:
         "is_mock":    False,
     }
 
+# ── QR CODE SCANNER ──────────────────────────────────────────────────────────
+
+# File types considered as pure media (cannot be scanned for scam text)
+MEDIA_EXTENSIONS = {
+    '.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg', '.ico',  # images
+    '.mp4', '.mov', '.avi', '.mkv', '.webm', '.flv', '.wmv', '.m4v',  # videos
+    '.mp3', '.wav', '.aac', '.ogg', '.flac', '.m4a',                   # audio
+    '.pdf', '.doc', '.docx', '.xls', '.xlsx', '.ppt', '.pptx',         # documents (non-text)
+}
+
+# Social media URL patterns
+SOCIAL_PATTERNS = {
+    'facebook': [r'facebook\.com', r'fb\.com', r'fb\.watch', r'm\.facebook\.com'],
+    'twitter':  [r'twitter\.com', r'x\.com', r't\.co'],
+    'instagram':[r'instagram\.com', r'instagr\.am'],
+    'tiktok':   [r'tiktok\.com', r'vm\.tiktok\.com'],
+    'youtube':  [r'youtube\.com', r'youtu\.be'],
+}
+
+def decode_qr_from_image(image_bytes: bytes) -> str:
+    """Decode QR code from image bytes using OpenCV. Returns the decoded string."""
+    # Convert bytes to numpy array
+    nparr = np_cv.frombuffer(image_bytes, np_cv.uint8)
+    img   = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+    if img is None:
+        raise ValueError("Could not read image. Make sure it is a valid image file (PNG, JPG, etc.).")
+
+    # Try standard QR decode first
+    detector = cv2.QRCodeDetector()
+    data, bbox, _ = detector.detectAndDecode(img)
+
+    if data:
+        return data.strip()
+
+    # Retry with grayscale + contrast enhancement
+    gray      = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    enhanced  = cv2.equalizeHist(gray)
+    data, bbox, _ = detector.detectAndDecode(cv2.cvtColor(enhanced, cv2.COLOR_GRAY2BGR))
+
+    if data:
+        return data.strip()
+
+    raise ValueError("No QR code detected in this image. Make sure the image is clear and the QR code is fully visible.")
+
+def classify_qr_content(content: str) -> dict:
+    """
+    Classify what type of content a QR code holds.
+    Returns a dict with: type, platform, is_media, scan_text, note
+    """
+    content = content.strip()
+
+    # ── Check if it is a URL ──────────────────────────────────────────────────
+    is_url = content.startswith(('http://', 'https://', 'www.', 'ftp://'))
+
+    if not is_url:
+        # Plain text — scan directly
+        return {
+            'type':       'plain_text',
+            'platform':   'qr',
+            'is_media':   False,
+            'scan_text':  content,
+            'note':       'Plain text extracted from QR code.',
+            'url':        None,
+        }
+
+    # ── It is a URL — parse it ────────────────────────────────────────────────
+    try:
+        parsed = urlparse(content if content.startswith('http') else 'https://' + content)
+        path   = parsed.path.lower()
+        ext    = '.' + path.split('.')[-1] if '.' in path else ''
+    except Exception:
+        parsed = None
+        path   = ''
+        ext    = ''
+
+    # ── Check if URL points directly to a media file ──────────────────────────
+    if ext in MEDIA_EXTENSIONS:
+        return {
+            'type':      'media_file',
+            'platform':  'qr',
+            'is_media':  True,
+            'scan_text': None,
+            'note':      f'This QR code links directly to a media file ({ext}). There is no text content to scan for scams.',
+            'url':       content,
+        }
+
+    # ── Check if URL is a social media link ───────────────────────────────────
+    for platform_name, patterns in SOCIAL_PATTERNS.items():
+        for pattern in patterns:
+            if re.search(pattern, content, re.IGNORECASE):
+                # Try to extract post caption from page meta tags
+                caption = _try_extract_social_caption(content)
+                if caption:
+                    return {
+                        'type':      'social_media_url',
+                        'platform':  platform_name,
+                        'is_media':  False,
+                        'scan_text': caption,
+                        'note':      f'Social media link detected ({platform_name.capitalize()}). Post caption extracted from page.',
+                        'url':       content,
+                    }
+                else:
+                    # Fall back to scanning the URL text itself
+                    return {
+                        'type':      'social_media_url',
+                        'platform':  platform_name,
+                        'is_media':  False,
+                        'scan_text': content,
+                        'note':      f'Social media link detected ({platform_name.capitalize()}). Caption could not be extracted — scanning URL text instead.',
+                        'url':       content,
+                    }
+
+    # ── Generic URL — scan the URL text itself ────────────────────────────────
+    return {
+        'type':      'url',
+        'platform':  'qr',
+        'is_media':  False,
+        'scan_text': content,
+        'note':      'URL extracted from QR code. Scanning URL text for scam indicators.',
+        'url':       content,
+    }
+
+def _try_extract_social_caption(url: str) -> str | None:
+    """
+    Attempt to extract post caption from a social media URL via Open Graph meta tags.
+    Returns the caption string if found, None otherwise.
+    Fails silently — never crashes the main flow.
+    """
+    try:
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (compatible; ScamShieldBot/1.0)',
+        }
+        resp = http_requests.get(url, headers=headers, timeout=5, allow_redirects=True)
+        if resp.status_code != 200:
+            return None
+        html = resp.text
+
+        # Try og:description first (most social platforms use this for post text)
+        og_desc = re.search(r"""<meta[^>]+property=["'](og:description)["'][^>]+content=["'](.*?)["']""", html, re.IGNORECASE | re.DOTALL)
+        if og_desc and og_desc.group(2).strip():
+            return og_desc.group(2).strip()[:1000]
+
+        # Fallback: meta description
+        meta_desc = re.search(r"""<meta[^>]+name=["'](description)["'][^>]+content=["'](.*?)["']""", html, re.IGNORECASE | re.DOTALL)
+        if meta_desc and meta_desc.group(2).strip():
+            return meta_desc.group(2).strip()[:1000]
+
+        return None
+    except Exception:
+        return None
+
 # ── ENDPOINTS ─────────────────────────────────────────────────────────────────
 @app.get("/")
 def root():
@@ -404,6 +571,108 @@ def health():
         "status":    "ok",
         "mock_mode": MOCK_MODE,
         "device":    str(DEVICE),
+    }
+
+@app.post("/scan-qr")
+@limiter.limit("20/minute")
+async def scan_qr(request: Request, file: UploadFile = File(...)):
+    """
+    QR Code scanning endpoint.
+    Accepts an image upload, decodes the QR, classifies the content,
+    and runs it through the scam detection pipeline.
+    """
+    # ── Validate file type ────────────────────────────────────────────────────
+    allowed_types = {"image/png", "image/jpeg", "image/jpg", "image/webp", "image/bmp", "image/gif"}
+    content_type  = (file.content_type or "").lower()
+    if content_type not in allowed_types:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid file type. Please upload a PNG, JPG, WEBP, or BMP image."
+        )
+
+    # ── Read and decode QR ────────────────────────────────────────────────────
+    image_bytes = await file.read()
+    if len(image_bytes) > 10 * 1024 * 1024:  # 10MB limit
+        raise HTTPException(status_code=400, detail="Image too large. Maximum size is 10MB.")
+
+    try:
+        qr_content = decode_qr_from_image(image_bytes)
+    except ValueError as e:
+        raise HTTPException(status_code=422, detail=str(e))
+
+    # ── Classify the QR content ───────────────────────────────────────────────
+    classified = classify_qr_content(qr_content)
+
+    # ── Reject pure media files ───────────────────────────────────────────────
+    if classified["is_media"]:
+        return {
+            "qr_content":  qr_content,
+            "content_type": classified["type"],
+            "platform":    "qr",
+            "note":        classified["note"],
+            "rejected":    True,
+            "verdict":     None,
+            "risk_score":  None,
+        }
+
+    # ── Run through scam detection pipeline ───────────────────────────────────
+    scan_text = classified["scan_text"]
+    if not scan_text or not scan_text.strip():
+        raise HTTPException(status_code=422, detail="Could not extract scannable text from QR content.")
+
+    # For QR scans, metadata is not applicable — use neutral default values
+    DEFAULT_AGE  = 365.0
+    DEFAULT_FREQ = 1.0
+
+    # Check for duplicate
+    existing = find_duplicate(scan_text, "qr", DEFAULT_AGE, DEFAULT_FREQ)
+    if existing:
+        return {
+            "qr_content":   qr_content,
+            "content_type": classified["type"],
+            "platform":     classified["platform"],
+            "note":         classified["note"],
+            "url":          classified.get("url"),
+            "scan_text":    scan_text,
+            "rejected":     False,
+            "is_duplicate": True,
+            "label":        existing.get("label", -1),
+            "verdict":      existing.get("verdict", ""),
+            "confidence":   existing.get("confidence", ""),
+            "scam_prob":    existing.get("scam_prob", ""),
+            "legit_prob":   existing.get("legit_prob", ""),
+            "is_mock":      bool(existing.get("is_mock", 0)),
+        }
+
+    # Create a fake PredictRequest for the existing pipeline
+    class _QRRequest:
+        text              = scan_text
+        platform          = "qr"
+        account_age       = DEFAULT_AGE
+        posting_frequency = DEFAULT_FREQ
+
+    qr_req = _QRRequest()
+    result = mock_predict(qr_req) if MOCK_MODE else real_predict(qr_req)
+
+    # Save to database
+    save_detection({
+        "text":              scan_text,
+        "platform":          "qr",
+        "account_age":       DEFAULT_AGE,
+        "posting_frequency": DEFAULT_FREQ,
+        **result,
+    }, is_mock=MOCK_MODE)
+
+    return {
+        "qr_content":   qr_content,
+        "content_type": classified["type"],
+        "platform":     classified["platform"],
+        "note":         classified["note"],
+        "url":          classified.get("url"),
+        "scan_text":    scan_text,
+        "rejected":     False,
+        "is_duplicate": False,
+        **result,
     }
 
 @app.post("/predict")

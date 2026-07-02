@@ -8,3 +8,6 @@ numpy
 joblib
 cryptography
 slowapi
+opencv-python-headless
+Pillow
+requests

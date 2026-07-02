@@ -44,3 +44,18 @@ export async function checkHealth() {
     return false;
   }
 }
+
+export async function scanQR(file) {
+  const formData = new FormData();
+  formData.append("file", file);
+  const res = await fetch(`${BASE}/scan-qr`, {
+    method: "POST",
+    body: formData,
+    // No Content-Type header — browser sets it automatically with boundary for multipart
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.detail || `QR scan error ${res.status}`);
+  }
+  return res.json();
+}
