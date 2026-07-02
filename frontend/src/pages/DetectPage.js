@@ -1,5 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { predict, checkHealth } from "../api";
+import { predict, checkHealth, resolveUrl } from "../api";
+import {
+  decodeQRFromImage,
+  classifyQRContent,
+  enrichResolvedLink,
+} from "../qr";
 import "./DetectPage.css";
 
 const DEFAULT_META = {
@@ -131,6 +136,14 @@ export default function DetectPage() {
   const [online, setOnline] = useState(null);
   const [tab, setTab] = useState("text");
 
+  // QR upload state
+  const [qrPreviewUrl, setQrPreviewUrl] = useState(null);
+  const [qrDecoding, setQrDecoding] = useState(false);
+  const [qrResolving, setQrResolving] = useState(false);
+  const [qrError, setQrError] = useState("");
+  const [qrDecodedRaw, setQrDecodedRaw] = useState("");
+  const [qrClassification, setQrClassification] = useState(null);
+
   useEffect(() => {
     checkHealth().then((ok) => setOnline(ok));
   }, []);
@@ -146,6 +159,109 @@ export default function DetectPage() {
   const handleMeta = (e) => {
     const { name, value } = e.target;
     setMeta((prev) => ({ ...prev, [name]: parseFloat(value) ?? value }));
+  };
+
+  // Reset only the QR-tab state (used on new upload / manual clear)
+  const clearQrState = () => {
+    setQrPreviewUrl(null);
+    setQrDecoding(false);
+    setQrResolving(false);
+    setQrError("");
+    setQrDecodedRaw("");
+    setQrClassification(null);
+  };
+
+  const handleQrRemove = () => {
+    clearQrState();
+    setText("");
+  };
+
+  const handleQrFile = async (e) => {
+    const file = e.target.files[0];
+    e.target.value = ""; // allow re-selecting the same file later
+    if (!file) return;
+
+    clearQrState();
+    setText("");
+    setResult(null);
+
+    if (!file.type.startsWith("image/")) {
+      setQrError("❌ Rejected: the uploaded file is not an image.");
+      return;
+    }
+
+    setQrPreviewUrl(URL.createObjectURL(file));
+    setQrDecoding(true);
+
+    let raw;
+    try {
+      raw = await decodeQRFromImage(file);
+    } catch {
+      setQrError("❌ Rejected: could not read this image file.");
+      setQrDecoding(false);
+      return;
+    }
+
+    if (!raw) {
+      setQrError("❌ Rejected: no QR code was detected in this image.");
+      setQrDecoding(false);
+      return;
+    }
+
+    setQrDecodedRaw(raw);
+    const classification = classifyQRContent(raw);
+
+    if (!classification.valid) {
+      // Only truly non-post payload shapes get rejected here (Wi-Fi,
+      // vCard, calendar invite, tel:/mailto:, empty, wrong scheme, etc.)
+      // — never based on which site/host the content points to.
+      setQrError(`⚠️ ${classification.reason}`);
+      setQrDecoding(false);
+      return;
+    }
+
+    // Accepted immediately — content is post/caption-shaped regardless of
+    // where the QR itself was encountered or which domain it points to.
+    setQrClassification(classification);
+    setText(classification.text);
+    if (classification.platform) {
+      setMeta((prev) => ({ ...prev, platform: classification.platform }));
+    }
+    setQrDecoding(false);
+
+    // Best-effort background enrichment: if it's a link, try to see past
+    // any shortener/dynamic-QR wrapper (me-qr.com, bit.ly, tinyurl...) so
+    // the user can see the real destination. This never un-accepts the
+    // content — if resolution fails or times out, we just keep using the
+    // original link as-is.
+    if (classification.contentType === "link") {
+      setQrResolving(true);
+      try {
+        const resolved = await resolveUrl(classification.text);
+        if (
+          resolved.ok &&
+          resolved.resolved_url &&
+          resolved.resolved_url !== classification.text
+        ) {
+          const enrichment = enrichResolvedLink(resolved.resolved_url);
+          if (enrichment) {
+            setQrClassification((prev) => ({
+              ...prev,
+              resolvedTo: enrichment.text,
+              resolvedHostname: enrichment.hostname,
+            }));
+            setText(enrichment.text);
+            if (enrichment.platform) {
+              setMeta((prev) => ({ ...prev, platform: enrichment.platform }));
+            }
+          }
+        }
+      } catch {
+        // Silently ignore — the original link is already accepted and usable.
+      } finally {
+        setQrResolving(false);
+      }
+    }
   };
 
   const handleSubmit = async () => {
@@ -175,6 +291,7 @@ export default function DetectPage() {
     setResult(null);
     setError("");
     setTab("text");
+    clearQrState();
   };
 
   const fillScamSample = () => {
@@ -246,6 +363,12 @@ export default function DetectPage() {
               ✏️ Post Caption
             </button>
             <button
+              className={`tab-btn ${tab === "qr" ? "tab-active" : ""}`}
+              onClick={() => setTab("qr")}
+            >
+              📷 Scan QR Image
+            </button>
+            <button
               className={`tab-btn ${tab === "meta" ? "tab-active" : ""}`}
               onClick={() => setTab("meta")}
             >
@@ -290,6 +413,94 @@ export default function DetectPage() {
                   ✅ Legit sample
                 </button>
               </div>
+            </div>
+          )}
+
+          {/* Tab: QR image upload */}
+          {tab === "qr" && (
+            <div className="tab-content">
+              <label
+                className="field-label"
+                style={{ marginBottom: 8, display: "block" }}
+              >
+                Upload a QR Code Image
+                <span className="field-hint">
+                  {" "}
+                  — must decode to a link or caption/post text
+                </span>
+              </label>
+
+              <label className="qr-dropzone">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleQrFile}
+                  style={{ display: "none" }}
+                />
+                {qrPreviewUrl ? (
+                  <img
+                    src={qrPreviewUrl}
+                    alt="Uploaded QR code"
+                    className="qr-preview-img"
+                  />
+                ) : (
+                  <>
+                    <div className="qr-drop-icon">🖼️</div>
+                    <div className="qr-drop-text">
+                      Click to upload a QR code image
+                    </div>
+                    <div className="qr-drop-hint">PNG, JPG, or WEBP</div>
+                  </>
+                )}
+              </label>
+
+              {qrDecoding && (
+                <div className="qr-status qr-status-loading">
+                  <span className="spinner" /> Scanning QR code…
+                </div>
+              )}
+
+              {!qrDecoding && qrError && (
+                <div className="qr-status qr-status-error">{qrError}</div>
+              )}
+
+              {!qrDecoding && qrClassification && qrClassification.valid && (
+                <div className="qr-status qr-status-ok">
+                  ✅ Recognized as{" "}
+                  {qrClassification.contentType === "link"
+                    ? "a post link"
+                    : "post/caption text"}
+                  {qrClassification.platform
+                    ? ` (${qrClassification.platform === "facebook" ? "Facebook" : "X"})`
+                    : ""}
+                  . Loaded into the analyzer below.
+                  <div className="qr-decoded-preview">
+                    "{qrDecodedRaw.substring(0, 160)}
+                    {qrDecodedRaw.length > 160 ? "…" : ""}"
+                  </div>
+                  {qrResolving && (
+                    <div className="qr-decoded-preview">
+                      🔎 Checking if this link redirects anywhere…
+                    </div>
+                  )}
+                  {!qrResolving && qrClassification.resolvedTo && (
+                    <div className="qr-decoded-preview">
+                      → redirects to: {qrClassification.resolvedTo}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {qrPreviewUrl && (
+                <button
+                  type="button"
+                  className="btn btn-ghost"
+                  style={{ alignSelf: "flex-start" }}
+                  onClick={handleQrRemove}
+                >
+                  Remove image
+                </button>
+              )}
             </div>
           )}
 
@@ -351,7 +562,7 @@ export default function DetectPage() {
                   <span className="spinner" /> Analysing...
                 </>
               ) : (
-                <>🔍 Analyse Post</>
+                <>🔍 {tab === "qr" ? "Analyse QR Content" : "Analyse Post"}</>
               )}
             </button>
             <button className="btn btn-ghost" onClick={handleReset}>

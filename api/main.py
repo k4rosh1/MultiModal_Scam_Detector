@@ -19,9 +19,13 @@ import hashlib
 import sqlite3
 import datetime
 import threading
+import ipaddress
+import socket
+from urllib.parse import urlparse, urljoin
 import numpy as np
 import torch
 import torch.nn as nn
+import requests
 from contextlib import contextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
@@ -405,6 +409,89 @@ def health():
         "mock_mode": MOCK_MODE,
         "device":    str(DEVICE),
     }
+
+# ── QR LINK RESOLVER ──────────────────────────────────────────────────────────
+# Dynamic QR services (me-qr.com, bit.ly, tinyurl, etc.) encode a short
+# redirect URL rather than the real destination. A phone follows the redirect
+# transparently; a browser-side JS check can't (CORS), so we resolve it here
+# and let the frontend classify the FINAL destination instead of the wrapper.
+RESOLVE_MAX_REDIRECTS = 5
+RESOLVE_TIMEOUT       = 5  # seconds per hop
+
+def _is_publicly_resolvable(url: str):
+    """SSRF guard: only allow http(s) URLs whose hostname resolves to a
+    public IP address. Blocks loopback/private/link-local/reserved ranges
+    so this endpoint can't be used to probe internal services."""
+    try:
+        parsed = urlparse(url)
+    except Exception:
+        return False, "Malformed URL."
+    if parsed.scheme not in ("http", "https"):
+        return False, "Only http/https links can be resolved."
+    hostname = parsed.hostname
+    if not hostname:
+        return False, "URL has no hostname."
+    try:
+        infos = socket.getaddrinfo(hostname, None)
+    except socket.gaierror:
+        return False, "Could not resolve hostname."
+    for info in infos:
+        try:
+            ip = ipaddress.ip_address(info[4][0])
+        except ValueError:
+            continue
+        if (ip.is_private or ip.is_loopback or ip.is_link_local or
+                ip.is_reserved or ip.is_multicast or ip.is_unspecified):
+            return False, "URL resolves to a non-public address."
+    return True, ""
+
+@app.get("/resolve-url")
+@limiter.limit("20/minute")
+def resolve_url(request: Request, url: str):
+    """
+    Follow redirects for a shortener/dynamic-QR link (me-qr.com, bit.ly,
+    tinyurl, etc.) and return the final destination URL — without ever
+    downloading the response body. Used by the QR-scan feature to see past
+    link wrappers before deciding whether the real destination is
+    Facebook or X.
+    """
+    safe, reason = _is_publicly_resolvable(url)
+    if not safe:
+        return {"ok": False, "error": reason, "original_url": url}
+
+    current = url
+    seen = {current}
+    headers = {"User-Agent": "Mozilla/5.0 (compatible; ScamShieldQRResolver/1.0)"}
+
+    try:
+        for _ in range(RESOLVE_MAX_REDIRECTS):
+            resp = requests.head(
+                current, allow_redirects=False, timeout=RESOLVE_TIMEOUT, headers=headers
+            )
+            # Some servers don't implement HEAD correctly — fall back to a
+            # streamed GET and close immediately without reading the body.
+            if resp.status_code == 405:
+                resp = requests.get(
+                    current, allow_redirects=False, timeout=RESOLVE_TIMEOUT,
+                    headers=headers, stream=True
+                )
+                resp.close()
+
+            if resp.status_code in (301, 302, 303, 307, 308) and "location" in resp.headers:
+                nxt = urljoin(current, resp.headers["location"])
+                safe, reason = _is_publicly_resolvable(nxt)
+                if not safe:
+                    return {"ok": False, "error": reason, "original_url": url}
+                if nxt in seen:
+                    return {"ok": False, "error": "Redirect loop detected.", "original_url": url}
+                seen.add(nxt)
+                current = nxt
+                continue
+            break
+    except requests.RequestException as e:
+        return {"ok": False, "error": f"Could not reach link: {e}", "original_url": url}
+
+    return {"ok": True, "original_url": url, "resolved_url": current}
 
 @app.post("/predict")
 @limiter.limit("30/minute")

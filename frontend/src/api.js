@@ -44,3 +44,19 @@ export async function checkHealth() {
     return false;
   }
 }
+
+// Follows redirects for a shortener/dynamic-QR link (me-qr.com, bit.ly, etc.)
+// server-side and returns the final destination URL. Needed because browsers
+// block JS from reading cross-origin redirect targets (CORS).
+export async function resolveUrl(url) {
+  const res = await fetch(
+    `${BASE}/resolve-url?url=${encodeURIComponent(url)}`,
+    {
+      signal: AbortSignal.timeout(8000),
+    },
+  );
+  if (!res.ok) {
+    throw new Error(`Resolve request failed (${res.status})`);
+  }
+  return res.json(); // { ok, resolved_url?, error?, original_url }
+}
