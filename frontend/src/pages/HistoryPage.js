@@ -1,35 +1,35 @@
-import React, { useState, useEffect } from 'react';
-import { getDetections, clearDetections } from '../api';
-import './HistoryPage.css';
+import React, { useState, useEffect } from "react";
+import { getDetections, clearDetections } from "../api";
+import "./HistoryPage.css";
 
 const FILTERS = [
-  { key: 'all',      label: 'All' },
-  { key: 'scam',     label: ' Scam' },
-  { key: 'legit',    label: ' Legit' },
-  { key: 'facebook', label: ' Facebook' },
-  { key: 'twitter',  label: ' X (Twitter)' },
+  { key: "all", label: "All" },
+  { key: "scam", label: " Scam" },
+  { key: "legit", label: " Legit" },
+  { key: "facebook", label: " Facebook" },
+  { key: "twitter", label: " X (Twitter)" },
 ];
 
 // Helper to get extension history
 async function getExtensionHistory() {
-  if (typeof chrome === 'undefined' || !chrome.runtime || !chrome.runtime.id) {
+  if (typeof chrome === "undefined" || !chrome.runtime || !chrome.runtime.id) {
     return [];
   }
-  
+
   return new Promise((resolve) => {
-    chrome.runtime.sendMessage({ action: 'getHistory' }, (response) => {
+    chrome.runtime.sendMessage({ action: "getHistory" }, (response) => {
       if (response && response.history) {
-        const formatted = response.history.map(item => ({
+        const formatted = response.history.map((item) => ({
           id: item.id,
-          text: item.text || '',
-          label: item.verdict === 'SCAM' ? 1 : 0,
+          text: item.text || "",
+          label: item.verdict === "SCAM" ? 1 : 0,
           verdict: item.verdict,
           confidence: item.confidence,
           scam_prob: item.scam_prob,
           legit_prob: item.legit_prob,
           platform: item.platform,
           timestamp: item.timestamp,
-          is_mock: item.is_mock || false
+          is_mock: item.is_mock || false,
         }));
         resolve(formatted);
       } else {
@@ -40,52 +40,67 @@ async function getExtensionHistory() {
 }
 
 export default function HistoryPage() {
-  const [rows,    setRows]    = useState([]);
-  const [filter,  setFilter]  = useState('all');
-  const [search,  setSearch]  = useState('');
+  const [rows, setRows] = useState([]);
+  const [filter, setFilter] = useState("all");
+  const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
-  const [error,   setError]   = useState('');
+  const [error, setError] = useState("");
+  const [selectedItem, setSelectedItem] = useState(null); // NEW: Tracks clicked row
 
   const load = async () => {
     setLoading(true);
-    try { 
+    try {
       // Get both backend and extension data
       const [backendData, extensionData] = await Promise.all([
         getDetections(200).catch(() => []),
-        getExtensionHistory().catch(() => [])
+        getExtensionHistory().catch(() => []),
       ]);
-      
+
       // Merge and sort by ID (newest first)
       const allData = [...backendData, ...extensionData];
       allData.sort((a, b) => (b.id || 0) - (a.id || 0));
-      
-      setRows(allData); 
-      setError(''); 
-    } catch (err) { 
-      console.error('Failed to load history:', err);
-      setError('Cannot reach API.'); 
-    } finally { 
-      setLoading(false); 
+
+      setRows(allData);
+      setError("");
+    } catch (err) {
+      console.error("Failed to load history:", err);
+      setError("Cannot reach API.");
+    } finally {
+      setLoading(false);
     }
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => {
+    load();
+  }, []);
 
   const handleClear = async () => {
-    if (!window.confirm('Clear all records? This clears ONLY backend records. Extension history will remain.')) return;
-    await clearDetections(); 
+    if (
+      !window.confirm(
+        "Clear all records? This clears ONLY backend records. Extension history will remain.",
+      )
+    )
+      return;
+    await clearDetections();
     load();
   };
 
-  const filtered = rows.filter(r => {
+  const filtered = rows.filter((r) => {
     const matchFilter =
-      filter === 'all'      ? true :
-      filter === 'scam'     ? r.label === 1 :
-      filter === 'legit'    ? r.label === 0 :
-      filter === 'facebook' ? r.platform === 'facebook' :
-      filter === 'twitter'  ? r.platform === 'twitter' : true;
-    const matchSearch = search.trim() === '' ||
-      (r.text || '').toLowerCase().includes(search.toLowerCase());
+      filter === "all"
+        ? true
+        : filter === "scam"
+          ? r.label === 1
+          : filter === "legit"
+            ? r.label === 0
+            : filter === "facebook"
+              ? r.platform === "facebook"
+              : filter === "twitter"
+                ? r.platform === "twitter"
+                : true;
+    const matchSearch =
+      search.trim() === "" ||
+      (r.text || "").toLowerCase().includes(search.toLowerCase());
     return matchFilter && matchSearch;
   });
 
@@ -94,27 +109,39 @@ export default function HistoryPage() {
       <div className="page-header">
         <div>
           <h1 className="page-title">Detection History</h1>
-          <p className="page-sub">All past detections — from manual input and browser extension</p>
+          <p className="page-sub">
+            All past detections — from manual input and browser extension
+          </p>
         </div>
-        <div style={{ display: 'flex', gap: 10 }}>
-          <button className="btn btn-ghost"  onClick={load}>↻ Refresh</button>
-          <button className="btn btn-danger" onClick={handleClear}>Clear All</button>
+        <div style={{ display: "flex", gap: 10 }}>
+          <button className="btn btn-ghost" onClick={load}>
+            ↻ Refresh
+          </button>
+          <button className="btn btn-danger" onClick={handleClear}>
+            Clear All
+          </button>
         </div>
       </div>
 
       <div className="controls-row">
         <div className="filter-tabs">
-          {FILTERS.map(f => (
-            <button key={f.key}
-              className={`filter-tab ${filter === f.key ? 'filter-active' : ''}`}
-              onClick={() => setFilter(f.key)}>
+          {FILTERS.map((f) => (
+            <button
+              key={f.key}
+              className={`filter-tab ${filter === f.key ? "filter-active" : ""}`}
+              onClick={() => setFilter(f.key)}
+            >
               {f.label}
             </button>
           ))}
         </div>
-        <input className="search-input" type="text"
+        <input
+          className="search-input"
+          type="text"
           placeholder="Search post text..."
-          value={search} onChange={e => setSearch(e.target.value)} />
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+        />
       </div>
 
       <div className="results-count">
@@ -122,15 +149,19 @@ export default function HistoryPage() {
       </div>
 
       {loading ? (
-        <div className="table-loading"><div className="big-spinner-h" /><span>Loading...</span></div>
+        <div className="table-loading">
+          <div className="big-spinner-h" />
+          <span>Loading...</span>
+        </div>
       ) : error ? (
         <div className="table-error card"> {error}</div>
       ) : filtered.length === 0 ? (
         <div className="table-empty card">
           <div style={{ fontSize: 40, marginBottom: 12 }}>📭</div>
           <p>No detections found.</p>
-          <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 6 }}>
-            Use the Detect page for manual scans, or the extension on Facebook/Twitter.
+          <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 6 }}>
+            Use the Detect page for manual scans, or the extension on
+            Facebook/Twitter.
           </p>
         </div>
       ) : (
@@ -138,37 +169,175 @@ export default function HistoryPage() {
           <table className="det-table">
             <thead>
               <tr>
-                <th>ID</th><th>Verdict</th><th>Platform</th><th>Post Text</th>
-                <th>Confidence</th><th>Scam %</th><th>Legit %</th>
-                <th>Mock?</th><th>Timestamp</th>
+                <th>ID</th>
+                <th>Verdict</th>
+                <th>Platform</th>
+                <th>Post Text</th>
+                <th>Confidence</th>
+                <th>Scam %</th>
+                <th>Legit %</th>
+                <th>Mock?</th>
+                <th>Timestamp</th>
               </tr>
             </thead>
             <tbody>
-              {filtered.map(r => {
+              {filtered.map((r) => {
                 const isScam = r.label === 1;
-                const conf   = parseFloat(r.confidence) || 0;
-                const ts     = r.timestamp ? new Date(r.timestamp).toLocaleString() : '—';
+                const conf = parseFloat(r.confidence) || 0;
+                const ts = r.timestamp
+                  ? new Date(r.timestamp).toLocaleString()
+                  : "—";
                 return (
-                  <tr key={r.id} className={isScam ? 'row-scam' : 'row-legit'}>
+                  <tr
+                    key={r.id}
+                    className={`clickable-row ${isScam ? "row-scam" : "row-legit"}`}
+                    onClick={() => setSelectedItem(r)}
+                  >
                     <td className="mono-cell">#{r.id}</td>
-                    <td><span className={`tag ${isScam ? 'tag-scam' : 'tag-legit'}`}>{isScam ? ' Scam' : ' Legit'}</span></td>
-                    <td><span className="plat-cell">{r.platform === 'facebook' ? ' FB' : r.platform === 'twitter' ? ' X' : ' ?'}</span></td>
-                    <td className="text-cell" title={r.text || ''}>{(r.text || '').substring(0, 70)}{r.text?.length > 70 ? '…' : ''}</td>
+                    <td>
+                      <span
+                        className={`tag ${isScam ? "tag-scam" : "tag-legit"}`}
+                      >
+                        {isScam ? " Scam" : " Legit"}
+                      </span>
+                    </td>
+                    <td>
+                      <span className="plat-cell">
+                        {r.platform === "facebook"
+                          ? " FB"
+                          : r.platform === "twitter"
+                            ? " X"
+                            : r.platform === "qr"
+                              ? " QR"
+                              : " ?"}
+                      </span>
+                    </td>
+                    <td className="text-cell" title={r.text || ""}>
+                      {(r.text || "").substring(0, 70)}
+                      {r.text?.length > 70 ? "…" : ""}
+                    </td>
                     <td>
                       <div className="mini-bar-wrap">
-                        <div className="mini-bar"><div className={`mini-fill ${isScam ? 'fill-scam' : 'fill-legit'}`} style={{ width: `${conf}%` }} /></div>
+                        <div className="mini-bar">
+                          <div
+                            className={`mini-fill ${isScam ? "fill-scam" : "fill-legit"}`}
+                            style={{ width: `${conf}%` }}
+                          />
+                        </div>
                         <span className="mono-cell">{conf.toFixed(0)}%</span>
                       </div>
                     </td>
-                    <td className="mono-cell" style={{ color: 'var(--danger)' }}>{r.scam_prob  ? parseFloat(r.scam_prob).toFixed(1)  + '%' : '—'}</td>
-                    <td className="mono-cell" style={{ color: 'var(--safe)'   }}>{r.legit_prob ? parseFloat(r.legit_prob).toFixed(1) + '%' : '—'}</td>
-                    <td className="mono-cell">{r.is_mock ? '🟡' : '✅'}</td>
+                    <td
+                      className="mono-cell"
+                      style={{ color: "var(--danger)" }}
+                    >
+                      {r.scam_prob
+                        ? parseFloat(r.scam_prob).toFixed(1) + "%"
+                        : "—"}
+                    </td>
+                    <td className="mono-cell" style={{ color: "var(--safe)" }}>
+                      {r.legit_prob
+                        ? parseFloat(r.legit_prob).toFixed(1) + "%"
+                        : "—"}
+                    </td>
+                    <td className="mono-cell">{r.is_mock ? "🟡" : "✅"}</td>
                     <td className="ts-cell">{ts}</td>
                   </tr>
                 );
               })}
             </tbody>
           </table>
+        </div>
+      )}
+
+      {/* ── DETAIL MODAL ── */}
+      {selectedItem && (
+        <div className="modal-overlay" onClick={() => setSelectedItem(null)}>
+          <div
+            className="modal-content card"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="modal-header">
+              <h2 className="modal-title">Scan Details #{selectedItem.id}</h2>
+              <button
+                className="modal-close"
+                onClick={() => setSelectedItem(null)}
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="modal-body">
+              <div
+                className="modal-verdict-banner"
+                style={{
+                  backgroundColor:
+                    selectedItem.label === 1
+                      ? "rgba(240, 82, 82, 0.1)"
+                      : "rgba(34, 197, 94, 0.1)",
+                  borderColor:
+                    selectedItem.label === 1 ? "var(--danger)" : "var(--safe)",
+                }}
+              >
+                <span style={{ fontSize: 24 }}>
+                  {selectedItem.label === 1 ? "🚨" : "✅"}
+                </span>
+                <div>
+                  <div
+                    style={{
+                      fontWeight: "bold",
+                      color:
+                        selectedItem.label === 1
+                          ? "var(--danger)"
+                          : "var(--safe)",
+                    }}
+                  >
+                    {selectedItem.verdict}
+                  </div>
+                  <div style={{ fontSize: 12, color: "var(--text-dim)" }}>
+                    {selectedItem.platform.toUpperCase()} •{" "}
+                    {selectedItem.timestamp
+                      ? new Date(selectedItem.timestamp).toLocaleString()
+                      : "Unknown Date"}
+                  </div>
+                </div>
+              </div>
+
+              <div className="modal-grid">
+                <div className="modal-stat">
+                  <span className="modal-stat-label">Model Confidence</span>
+                  <span className="modal-stat-value">
+                    {parseFloat(selectedItem.confidence || 0).toFixed(1)}%
+                  </span>
+                </div>
+                <div className="modal-stat">
+                  <span className="modal-stat-label">Scam Probability</span>
+                  <span
+                    className="modal-stat-value"
+                    style={{ color: "var(--danger)" }}
+                  >
+                    {parseFloat(selectedItem.scam_prob || 0).toFixed(1)}%
+                  </span>
+                </div>
+                <div className="modal-stat">
+                  <span className="modal-stat-label">Legit Probability</span>
+                  <span
+                    className="modal-stat-value"
+                    style={{ color: "var(--safe)" }}
+                  >
+                    {parseFloat(selectedItem.legit_prob || 0).toFixed(1)}%
+                  </span>
+                </div>
+              </div>
+
+              <div className="modal-text-section">
+                <span className="modal-text-label">Scanned Text / Content</span>
+                <div className="modal-text-box">
+                  {selectedItem.text || "No text content available."}
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       )}
     </div>

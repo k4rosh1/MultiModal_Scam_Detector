@@ -195,11 +195,15 @@ function QRUploadTab({ onResult, onError, onLoading }) {
     onResult(null);
     try {
       const res = await scanQR(file);
+
+      // Right here! We catch the rejection and fire off an alert
       if (res.rejected) {
         setRejected(res.note);
+        alert("Scan Rejected!\n\n" + res.note);
         onLoading(false);
         return;
       }
+
       setQrInfo({
         raw: res.qr_content,
         type: res.content_type,
