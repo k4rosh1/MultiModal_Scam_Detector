@@ -250,10 +250,30 @@ class EarlyFusionScamDetector(nn.Module):
         fused         = torch.cat([cls_embedding, metadata], dim=1)
         return self.classifier(fused)
 
-# ── LOAD REAL MODEL ───────────────────────────────────────────────────────────
-tokenizer = None
-scaler    = None
-model     = None
+class TextOnlyBaseline(nn.Module):
+    """
+    Text-only model (no metadata). Used for inputs where there is no real
+    account behavior to report — QR code scans and plain-text scans — so we
+    don't have to feed the multi-modal model fixed placeholder metadata
+    (which can bias results toward whatever the model learned to associate
+    with that particular account_age/posting_frequency combination).
+    """
+    def __init__(self, bert_model_name):
+        super().__init__()
+        from transformers import AutoModel
+        self.bert       = AutoModel.from_pretrained(bert_model_name)
+        self.classifier = nn.Linear(768, 2)
+
+    def forward(self, input_ids, attention_mask):
+        bert_out      = self.bert(input_ids=input_ids, attention_mask=attention_mask)
+        cls_embedding = bert_out.last_hidden_state[:, 0, :]
+        return self.classifier(cls_embedding)
+
+# ── LOAD REAL MODEL(S) ─────────────────────────────────────────────────────────
+tokenizer       = None
+scaler          = None
+model           = None
+text_only_model = None   # optional — only used if scam_model/text_only_model.pt exists
 
 if not MOCK_MODE:
     try:
@@ -274,6 +294,27 @@ if not MOCK_MODE:
         print(f"❌ Failed to load model: {e}")
         print("   Falling back to MOCK_MODE")
         MOCK_MODE = True
+
+    # Text-only model is optional — gracefully skip if it hasn't been trained yet.
+    # (Produced by the updated scam_detection.py, saved to text_only_model.pt.)
+    text_only_path = os.path.join(MODEL_DIR, "text_only_model.pt")
+    if os.path.exists(text_only_path):
+        try:
+            text_only_model = TextOnlyBaseline(bert_model_name="bert-base-multilingual-cased")
+            text_only_model.load_state_dict(
+                torch.load(text_only_path, map_location=DEVICE),
+                strict=False
+            )
+            text_only_model.to(DEVICE)
+            text_only_model.eval()
+            print(f"✅ Text-only model loaded on {DEVICE} — will be used for QR/plain-text scans")
+        except Exception as e:
+            print(f"⚠️  Failed to load text-only model: {e}")
+            print("   QR/plain-text scans will fall back to the multi-modal model with default metadata")
+            text_only_model = None
+    else:
+        print("🟡 No text_only_model.pt found — QR/plain-text scans will use the multi-modal "
+              "model with default metadata until you retrain and save it (see scam_detection.py)")
 else:
     print("🟡 MOCK_MODE is ON — returning simulated predictions")
 
@@ -403,7 +444,38 @@ def real_predict(req: PredictRequest) -> dict:
         "is_mock":    False,
     }
 
-# ── QR CODE SCANNER ──────────────────────────────────────────────────────────
+def real_predict_text_only(text: str, platform: str = "qr") -> dict:
+    """
+    Prediction using the text-only model — no metadata involved at all.
+    Used for QR code / plain-text scans, where there's no real account
+    behavior to describe and feeding the multi-modal model fixed placeholder
+    metadata would otherwise bias the result.
+    """
+    enc = tokenizer(
+        text, max_length=MAX_LEN, padding='max_length',
+        truncation=True, return_tensors='pt'
+    )
+    input_ids      = enc['input_ids'].to(DEVICE)
+    attention_mask = enc['attention_mask'].to(DEVICE)
+    with torch.no_grad():
+        logits = text_only_model(input_ids, attention_mask)
+        probs  = torch.softmax(logits, dim=1)[0]
+        label  = logits.argmax(dim=1).item()
+    confidence = probs[label].item() * 100
+    scam_prob  = probs[1].item() * 100
+    legit_prob = probs[0].item() * 100
+    return {
+        "label":      label,
+        "verdict":    "SCAM" if label == 1 else "LEGITIMATE",
+        "confidence": f"{confidence:.1f}%",
+        "scam_prob":  f"{scam_prob:.1f}%",
+        "legit_prob": f"{legit_prob:.1f}%",
+        "platform":   platform,
+        "is_mock":    False,
+        "model_used": "text_only",
+    }
+
+
 
 # File types considered as pure media (cannot be scanned for scam text)
 MEDIA_EXTENSIONS = {
@@ -509,20 +581,40 @@ def decode_qr_from_image(image_bytes: bytes) -> str:
 
     raise ValueError("No QR code detected in this image. Make sure the image is clear and the QR code is fully visible.")
 
-def _resolve_final_url(url: str, timeout: float = 5.0) -> str:
+def _resolve_final_url_and_type(url: str, timeout: float = 5.0):
     """Follow redirects (shorteners, QR tracking links like me-qr.com, bit.ly,
-    etc.) to find the final destination URL. Returns the original URL
-    unchanged if resolution fails for any reason — never raises."""
+    etc.) to find the final destination URL, and capture the real
+    Content-Type header along the way. Returns (final_url, content_type).
+    content_type is '' if it couldn't be determined. Never raises — returns
+    (url, '') on any failure."""
     try:
         headers = {'User-Agent': 'Mozilla/5.0 (compatible; ScamShieldBot/1.0)'}
         resp = http_requests.head(url, headers=headers, timeout=timeout, allow_redirects=True)
-        # Some servers don't support HEAD properly (405/403) — retry with GET
-        if resp.status_code >= 400 or resp.url == url:
+        # Some servers don't support HEAD properly, or don't report a useful
+        # Content-Type on HEAD (common for CDNs/media hosts) — retry with GET.
+        content_type = resp.headers.get('Content-Type', '').lower()
+        if resp.status_code >= 400 or resp.url == url or not content_type:
             resp = http_requests.get(url, headers=headers, timeout=timeout, allow_redirects=True, stream=True)
+            content_type = resp.headers.get('Content-Type', '').lower()
             resp.close()
-        return resp.url or url
+        return (resp.url or url), content_type
     except Exception:
-        return url
+        return url, ''
+
+
+_MEDIA_MIME_PREFIXES = ('image/', 'video/', 'audio/')
+_MEDIA_MIME_EXACT = {
+    'application/pdf', 'application/msword', 'application/vnd.ms-excel',
+    'application/vnd.ms-powerpoint',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+}
+
+
+def _is_media_content_type(content_type: str) -> bool:
+    ct = content_type.split(';')[0].strip()  # strip charset etc.
+    return ct.startswith(_MEDIA_MIME_PREFIXES) or ct in _MEDIA_MIME_EXACT
 
 
 def classify_qr_content(content: str) -> dict:
@@ -531,6 +623,20 @@ def classify_qr_content(content: str) -> dict:
     Returns a dict with: type, platform, is_media, scan_text, note
     """
     content = content.strip()
+
+    # ── Data URIs — media embedded directly in the QR, no fetch needed ────────
+    data_uri_match = re.match(r'^data:([\w./+-]+);', content, re.IGNORECASE)
+    if data_uri_match and _is_media_content_type(data_uri_match.group(1).lower()):
+        return {
+            'type':      'media_file',
+            'platform':  'qr',
+            'is_media':  True,
+            'scan_text': None,
+            'note':      f'This QR code embeds a media file directly ({data_uri_match.group(1)}). There is no text content to scan for scams.',
+            'url':       None,
+            'original_url': None,
+            'used_redirect': False,
+        }
 
     # ── Check if it is a URL ──────────────────────────────────────────────────
     is_url = content.startswith(('http://', 'https://', 'www.', 'ftp://'))
@@ -548,10 +654,11 @@ def classify_qr_content(content: str) -> dict:
 
     # ── Resolve redirects/shorteners (e.g. me-qr.com, bit.ly, tinyurl) ────────
     # QR codes very commonly encode a tracking/redirect link rather than the
-    # final destination. We resolve it first so classification and content
+    # final destination. We resolve it first, and capture the real
+    # Content-Type in the same request, so classification and content
     # extraction reflect where it actually leads, not the shortener itself.
     original_content = content
-    resolved_url = _resolve_final_url(content)
+    resolved_url, content_type = _resolve_final_url_and_type(content)
     used_redirect = resolved_url != original_content
     content = resolved_url
 
@@ -568,13 +675,21 @@ def classify_qr_content(content: str) -> dict:
     redirect_note = f' (resolved from shortener/redirect: {original_content})' if used_redirect else ''
 
     # ── Check if URL points directly to a media file ──────────────────────────
-    if ext in MEDIA_EXTENSIONS:
+    # Two signals: the file extension in the path (fast, works for direct file
+    # links like example.com/photo.jpg), and the actual Content-Type header
+    # (more reliable — catches CDN/tokenized links, Google Drive, etc. that
+    # serve media without any file extension visible in the URL).
+    is_media_by_ext  = ext in MEDIA_EXTENSIONS
+    is_media_by_type = _is_media_content_type(content_type)
+
+    if is_media_by_ext or is_media_by_type:
+        detected_as = ext if is_media_by_ext else content_type.split(';')[0]
         return {
             'type':      'media_file',
             'platform':  'qr',
             'is_media':  True,
             'scan_text': None,
-            'note':      f'This QR code links directly to a media file ({ext}){redirect_note}. There is no text content to scan for scams.',
+            'note':      f'This QR code links directly to a media file ({detected_as}){redirect_note}. There is no text content to scan for scams.',
             'url':       content,
             'original_url': original_content,
             'used_redirect': used_redirect,
@@ -822,7 +937,8 @@ async def scan_qr(request: Request, file: UploadFile = File(...)):
             "is_mock":      bool(existing.get("is_mock", 0)),
         }
 
-    # Create a fake PredictRequest for the existing pipeline
+    # Create a fake PredictRequest for the existing pipeline (used only as a
+    # fallback if the text-only model hasn't been trained/saved yet)
     class _QRRequest:
         text              = scan_text
         platform          = "qr"
@@ -830,7 +946,18 @@ async def scan_qr(request: Request, file: UploadFile = File(...)):
         posting_frequency = DEFAULT_FREQ
 
     qr_req = _QRRequest()
-    result = mock_predict(qr_req) if MOCK_MODE else real_predict(qr_req)
+
+    if MOCK_MODE:
+        result = mock_predict(qr_req)
+    elif text_only_model is not None:
+        # Preferred path: no real account metadata exists for a QR scan, so
+        # use the text-only model instead of feeding the multi-modal model
+        # fixed placeholder values.
+        result = real_predict_text_only(scan_text, platform="qr")
+    else:
+        # Fallback until text_only_model.pt has been trained and saved —
+        # see scam_detection.py / retraining instructions.
+        result = real_predict(qr_req)
 
     # Save to database
     save_detection({
