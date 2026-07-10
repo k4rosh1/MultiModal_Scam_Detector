@@ -55,7 +55,7 @@ function Navbar({ theme, toggleTheme }) {
           }
           end
         >
-          🔍 Detect
+          Detect
         </NavLink>
         <NavLink
           to="/dashboard"
@@ -63,7 +63,7 @@ function Navbar({ theme, toggleTheme }) {
             isActive ? "nav-link active" : "nav-link"
           }
         >
-          📊 Dashboard
+          Dashboard
         </NavLink>
         <NavLink
           to="/history"
@@ -71,7 +71,7 @@ function Navbar({ theme, toggleTheme }) {
             isActive ? "nav-link active" : "nav-link"
           }
         >
-          🗂 History
+          History
         </NavLink>
       </div>
 

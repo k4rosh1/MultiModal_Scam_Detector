@@ -157,7 +157,7 @@ export default function HistoryPage() {
         <div className="table-error card"> {error}</div>
       ) : filtered.length === 0 ? (
         <div className="table-empty card">
-          <div style={{ fontSize: 40, marginBottom: 12 }}>📭</div>
+          <div style={{ fontSize: 40, marginBottom: 12 }}></div>
           <p>No detections found.</p>
           <p style={{ fontSize: 12, color: "var(--text-muted)", marginTop: 6 }}>
             Use the Detect page for manual scans, or the extension on

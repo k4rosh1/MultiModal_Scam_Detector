@@ -523,26 +523,37 @@ body {
 .footer {
   display: flex;
   justify-content: center;
-  gap: 30px;
+  gap: 12px;
   padding-top: 12px;
   margin-top: 8px;
   border-top: 1px solid var(--border);
 }
 
-.footer a {
+/* Nav button styling matching the overall interface design */
+.btn-nav {
+  flex: 1;
+  background: var(--surface);
   color: var(--text-dim);
-  text-decoration: none;
-  font-size: 12px;
-  padding: 5px 10px;
+  border: 1px solid var(--border);
+  padding: 8px 12px;
   border-radius: var(--radius-sm);
-  transition: all 0.2s;
+  font-size: 12px;
+  font-weight: 600;
   cursor: pointer;
+  font-family: inherit;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
 }
 
-.footer a:hover {
-  background: var(--surface);
-  color: var(--accent);
-  text-decoration: none;
+.btn-nav:hover {
+  background: var(--surface2);
+  border-color: var(--accent);
+  color: var(--text);
+  transform: translateY(-1px);
+}
+
+.btn-nav:active {
+  transform: translateY(0);
 }
 
 @keyframes spin {

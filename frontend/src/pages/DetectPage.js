@@ -249,7 +249,7 @@ function QRUploadTab({ onResult, onError, onLoading }) {
           <img src={preview} alt="QR preview" className="qr-preview-img" />
         ) : (
           <>
-            <div className="qr-drop-icon">📷</div>
+            <div className="qr-drop-icon"></div>
             <p className="qr-drop-title">Upload QR Code Image</p>
             <p className="qr-drop-sub">Drag & drop or click to browse</p>
             <p className="qr-drop-hint">PNG, JPG, WEBP, BMP supported</p>
@@ -276,7 +276,7 @@ function QRUploadTab({ onResult, onError, onLoading }) {
       {/* Rejection message */}
       {rejected && (
         <div className="qr-rejected">
-          <div className="qr-rejected-icon">🚫</div>
+          <div className="qr-rejected-icon"></div>
           <p className="qr-rejected-title">Cannot Scan This Content</p>
           <p className="qr-rejected-msg">{rejected}</p>
         </div>
@@ -313,7 +313,7 @@ function QRUploadTab({ onResult, onError, onLoading }) {
           onClick={handleScan}
           disabled={!file}
         >
-          🔍 Scan QR Code
+          Scan QR Code
         </button>
         {file && (
           <button className="btn btn-ghost" onClick={handleReset}>
@@ -445,7 +445,7 @@ export default function DetectPage() {
                 setError("");
               }}
             >
-              📘 Facebook
+              Facebook
             </button>
             <button
               className={`plat-btn ${mode === "twitter" ? "plat-active" : ""}`}
@@ -456,7 +456,7 @@ export default function DetectPage() {
                 setError("");
               }}
             >
-              🐦 X (Twitter)
+              X (Twitter)
             </button>
             <button
               className={`plat-btn ${mode === "qr" ? "plat-active plat-qr" : ""}`}
@@ -466,7 +466,7 @@ export default function DetectPage() {
                 setError("");
               }}
             >
-              📷 QR Code
+              QR Code
             </button>
           </div>
 
@@ -526,7 +526,7 @@ export default function DetectPage() {
                   />
                   <div className="char-count">{text.length} characters</div>
                   <div className="examples-wrap">
-                    <span className="examples-label">Try an example:</span>
+                    {/* <span className="examples-label">Try an example:</span>
                     <button
                       className="example-btn scam-ex"
                       onClick={fillScamSample}
@@ -538,7 +538,7 @@ export default function DetectPage() {
                       onClick={fillLegitSample}
                     >
                       ✅ Legit sample
-                    </button>
+                    </button> */}
                   </div>
                 </div>
               )}
@@ -602,7 +602,7 @@ export default function DetectPage() {
                       <span className="spinner" /> Analysing...
                     </>
                   ) : (
-                    <>🔍 Analyse Post</>
+                    <>Analyse Post</>
                   )}
                 </button>
                 <button className="btn btn-ghost" onClick={handleReset}>
@@ -617,7 +617,7 @@ export default function DetectPage() {
         <div className="result-panel">
           {!result && !loading && (
             <div className="result-placeholder">
-              <div className="placeholder-icon">{isQR ? "📷" : "🛡️"}</div>
+              <div className="placeholder-icon">{isQR ? "" : ""}</div>
               <p className="placeholder-title">Ready to analyse</p>
               <p className="placeholder-sub">
                 {isQR
