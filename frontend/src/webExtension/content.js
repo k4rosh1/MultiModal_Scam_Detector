@@ -1,58 +1,58 @@
-console.log('========================================');
-console.log('🔵 ScamShield Content Script LOADED!');
-console.log('📍 URL:', window.location.href);
-console.log('========================================');
+console.log("========================================");
+console.log("🔵 ScamShield Content Script LOADED!");
+console.log("📍 URL:", window.location.href);
+console.log("========================================");
 
 let scannedPosts = new WeakMap();
 let observer = null;
 let autoDetectEnabled = true;
 let isScanning = false;
-let currentPlatform = 'web';
+let currentPlatform = "web";
 let currentAccountAge = 365;
 let currentPostsPerDay = 1.0;
 let currentMetadata = {
-  platform: 'web',
-  accountAge: 'Unknown',
-  postsPerDay: 'Unknown',
-  lastActive: 'Unknown'
+  platform: "web",
+  accountAge: "Unknown",
+  postsPerDay: "Unknown",
+  lastActive: "Unknown",
 };
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  console.log('📨 Content script received:', request.action);
+  console.log("📨 Content script received:", request.action);
 
-  if (request.action === 'ping') {
-    sendResponse({ status: 'ready', metadata: currentMetadata });
+  if (request.action === "ping") {
+    sendResponse({ status: "ready", metadata: currentMetadata });
     return true;
   }
 
-  if (request.action === 'scanPage') {
-    console.log('📄 Manual scan requested');
+  if (request.action === "scanPage") {
+    console.log("📄 Manual scan requested");
     if (isScanning) {
-      sendResponse({ status: 'already_scanning' });
+      sendResponse({ status: "already_scanning" });
       return true;
     }
     scanAllPostsAsync();
-    sendResponse({ status: 'started' });
+    sendResponse({ status: "started" });
     return true;
   }
 
-  if (request.action === 'getProfileInfo') {
-    console.log('📊 Getting profile info...');
-    extractUserMetadata().then(metadata => {
-      console.log('📊 Sending metadata:', metadata);
+  if (request.action === "getProfileInfo") {
+    console.log("📊 Getting profile info...");
+    extractUserMetadata().then((metadata) => {
+      console.log("📊 Sending metadata:", metadata);
       sendResponse({ profileInfo: metadata });
     });
     return true;
   }
 
-  if (request.action === 'clearHighlights') {
+  if (request.action === "clearHighlights") {
     clearHighlights();
     scannedPosts = new WeakMap();
-    sendResponse({ status: 'cleared' });
+    sendResponse({ status: "cleared" });
     return true;
   }
 
-  if (request.type === 'AUTO_DETECT_CHANGED') {
+  if (request.type === "AUTO_DETECT_CHANGED") {
     autoDetectEnabled = request.enabled;
     if (!autoDetectEnabled && observer) {
       observer.disconnect();
@@ -66,109 +66,192 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 });
 
+// Converts strings like "Joined June 2015" or "June 2015" into an integer
+// number of days since that date. Falls back to null if it can't parse.
+function joinDateToAccountAgeDays(rawText) {
+  if (!rawText) return null;
+
+  const cleaned = rawText.replace(/^Joined\s+/i, "").trim();
+
+  // Matches "June 2015", "Jun 2015", "2015" etc.
+  const monthYearMatch = cleaned.match(/([A-Za-z]+)\s+(\d{4})/);
+  const yearOnlyMatch = cleaned.match(/^(\d{4})$/);
+
+  let joinedDate = null;
+  if (monthYearMatch) {
+    const parsed = Date.parse(`${monthYearMatch[1]} 1, ${monthYearMatch[2]}`);
+    if (!isNaN(parsed)) joinedDate = new Date(parsed);
+  } else if (yearOnlyMatch) {
+    joinedDate = new Date(parseInt(yearOnlyMatch[1], 10), 0, 1);
+  }
+
+  if (!joinedDate) return null;
+
+  const diffMs = Date.now() - joinedDate.getTime();
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+  return diffDays > 0 ? diffDays : null;
+}
+
 function detectPlatform() {
   const url = window.location.href.toLowerCase();
-  if (url.includes('facebook.com') || url.includes('fb.com')) return 'facebook';
-  if (url.includes('twitter.com') || url.includes('x.com')) return 'twitter';
-  return 'web';
+  if (url.includes("facebook.com") || url.includes("fb.com")) return "facebook";
+  if (url.includes("twitter.com") || url.includes("x.com")) return "twitter";
+  return "web";
 }
 
 async function extractUserMetadata() {
   const platform = detectPlatform();
   const metadata = {
     platform: platform,
-    accountAge: 'Unknown',
-    postsPerDay: 'Unknown',
-    lastActive: 'Unknown',
-    profileText: ''
+    accountAge: "Unknown",
+    postsPerDay: "Unknown",
+    lastActive: "Unknown",
+    profileText: "",
   };
-  
+
   console.log(`🔍 Extracting metadata for ${platform}...`);
-  
-  if (platform === 'facebook') {
+
+  let accountAgeDays = null;
+
+  if (platform === "facebook") {
     const nameEl = document.querySelector('[data-testid="profile_name"], h1');
     if (nameEl) {
-      metadata.profileText = nameEl.innerText?.trim() || '';
-      console.log('Found profile name:', metadata.profileText);
+      metadata.profileText = nameEl.innerText?.trim() || "";
+      console.log("Found profile name:", metadata.profileText);
     }
-    
+
     const bioEl = document.querySelector('[data-testid="profile_description"]');
     if (bioEl) {
-      metadata.profileText += ' ' + (bioEl.innerText?.trim() || '');
+      metadata.profileText += " " + (bioEl.innerText?.trim() || "");
     }
-    
+
     const bodyText = document.body.innerText;
     const joinMatch = bodyText.match(/Joined\s+(\w+\s+\d{4})/i);
     if (joinMatch) {
       metadata.accountAge = joinMatch[1];
-      console.log('Found join date:', metadata.accountAge);
+      accountAgeDays = joinDateToAccountAgeDays(joinMatch[1]);
+      console.log(
+        "Found join date:",
+        metadata.accountAge,
+        "→",
+        accountAgeDays,
+        "days",
+      );
     } else {
       const memberMatch = bodyText.match(/Member\s+since\s+(\w+\s+\d{4})/i);
       if (memberMatch) {
         metadata.accountAge = memberMatch[1];
-        console.log('Found member since:', metadata.accountAge);
+        accountAgeDays = joinDateToAccountAgeDays(memberMatch[1]);
+        console.log(
+          "Found member since:",
+          metadata.accountAge,
+          "→",
+          accountAgeDays,
+          "days",
+        );
       }
     }
-    
-    const activeMatch = bodyText.match(/Active\s+(\d+)\s+(hours?|days?|minutes?)\s+ago/i);
+
+    const activeMatch = bodyText.match(
+      /Active\s+(\d+)\s+(hours?|days?|minutes?)\s+ago/i,
+    );
     if (activeMatch) {
       metadata.lastActive = `${activeMatch[1]} ${activeMatch[2]} ago`;
-      console.log('Found last active:', metadata.lastActive);
+      console.log("Found last active:", metadata.lastActive);
     }
-    
-  } else if (platform === 'twitter') {
+  } else if (platform === "twitter") {
     const nameEl = document.querySelector('[data-testid="UserName"]');
     if (nameEl) {
-      metadata.profileText = nameEl.innerText?.trim() || '';
-      console.log('Found profile name:', metadata.profileText);
+      metadata.profileText = nameEl.innerText?.trim() || "";
+      console.log("Found profile name:", metadata.profileText);
     }
-    
+
     const bioEl = document.querySelector('[data-testid="UserDescription"]');
     if (bioEl) {
-      metadata.profileText += ' ' + (bioEl.innerText?.trim() || '');
+      metadata.profileText += " " + (bioEl.innerText?.trim() || "");
     }
-    
+
+    // Primary selector. X changes its DOM/testids periodically, so we fall
+    // back to a text-based scan of the profile header if this comes up empty.
+    let joinDateText = null;
     const joinDateEl = document.querySelector('[data-testid="UserJoinDate"]');
     if (joinDateEl) {
-      metadata.accountAge = joinDateEl.innerText?.trim() || 'Unknown';
-      console.log('Found join date:', metadata.accountAge);
+      joinDateText = joinDateEl.innerText?.trim() || null;
+    }
+    if (!joinDateText) {
+      const headerEl =
+        document.querySelector('[data-testid="UserProfileHeader_Items"]') ||
+        document.body;
+      const headerText = headerEl.innerText || "";
+      const joinMatch = headerText.match(/Joined\s+([A-Za-z]+\s+\d{4}|\d{4})/i);
+      if (joinMatch) joinDateText = joinMatch[0];
+    }
+
+    if (joinDateText) {
+      metadata.accountAge = joinDateText;
+      accountAgeDays = joinDateToAccountAgeDays(joinDateText);
+      console.log(
+        "Found join date:",
+        joinDateText,
+        "→",
+        accountAgeDays,
+        "days",
+      );
+    } else {
+      console.warn(
+        "⚠️ Could not find X join date on page — falling back to default account_age",
+      );
     }
   }
-  
+
   let postCount = 0;
-  if (platform === 'facebook') {
+  if (platform === "facebook") {
     const posts = document.querySelectorAll('[data-testid="post_message"]');
     for (const post of posts) {
       if (!post.closest('[role="comment"]')) {
         postCount++;
       }
     }
-  } else if (platform === 'twitter') {
-    postCount = document.querySelectorAll('[data-testid="tweet"]').length;
+  } else if (platform === "twitter") {
+    postCount = document.querySelectorAll(
+      '[data-testid="tweet"], [data-testid="tweetText"]',
+    ).length;
   }
-  
+
+  let postsPerDayValue = null;
   if (postCount > 0) {
-    const avgPerDay = (postCount / 7).toFixed(1);
-    metadata.postsPerDay = `${avgPerDay} per day (${postCount} visible)`;
-    console.log('Calculated posts per day:', metadata.postsPerDay);
+    postsPerDayValue = parseFloat((postCount / 7).toFixed(1));
+    metadata.postsPerDay = `${postsPerDayValue} per day (${postCount} visible)`;
+    console.log("Calculated posts per day:", metadata.postsPerDay);
   }
-  
+
+  // Update the numeric globals actually sent to the API. Only overwrite
+  // when we successfully scraped a value — otherwise keep prior/default.
+  if (accountAgeDays !== null) currentAccountAge = accountAgeDays;
+  if (postsPerDayValue !== null && postsPerDayValue > 0)
+    currentPostsPerDay = postsPerDayValue;
+
   currentMetadata = metadata;
-  console.log('📊 Final metadata:', metadata);
+  console.log("📊 Final metadata:", metadata, "| numeric →", {
+    accountAge: currentAccountAge,
+    postsPerDay: currentPostsPerDay,
+  });
   return metadata;
 }
 
 function getFacebookPosts() {
   const posts = [];
-  const postElements = document.querySelectorAll('[data-testid="post_message"]');
+  const postElements = document.querySelectorAll(
+    '[data-testid="post_message"]',
+  );
   let count = 0;
-  
+
   for (const el of postElements) {
     if (count >= 15) break;
     if (scannedPosts.has(el)) continue;
     if (el.closest('[role="comment"]')) continue;
     if (el.closest('[aria-label="Chats"]')) continue;
-    
+
     const text = el.innerText?.trim();
     if (text && text.length > 20) {
       console.log(`📝 Facebook post: "${text.substring(0, 50)}..."`);
@@ -183,11 +266,11 @@ function getTwitterPosts() {
   const posts = [];
   const tweetElements = document.querySelectorAll('[data-testid="tweetText"]');
   let count = 0;
-  
+
   for (const el of tweetElements) {
     if (count >= 15) break;
     if (scannedPosts.has(el)) continue;
-    
+
     const text = el.innerText?.trim();
     if (text && text.length > 20) {
       console.log(`📝 Twitter post: "${text.substring(0, 50)}..."`);
@@ -200,61 +283,78 @@ function getTwitterPosts() {
 
 async function scanAllPostsAsync() {
   if (isScanning) {
-    console.log('Already scanning, skipping');
+    console.log("Already scanning, skipping");
     return;
   }
-  
+
   isScanning = true;
-  
+
   try {
     const platform = detectPlatform();
-    if (platform === 'web') {
-      console.log('Not a supported platform');
+    if (platform === "web") {
+      console.log("Not a supported platform");
       isScanning = false;
       return;
     }
-    
+
     console.log(`🔍 Scanning ${platform} for posts...`);
-    
+
     await extractUserMetadata();
-    
+
     let posts = [];
-    if (platform === 'facebook') {
+    if (platform === "facebook") {
       posts = getFacebookPosts();
-    } else if (platform === 'twitter') {
+    } else if (platform === "twitter") {
       posts = getTwitterPosts();
     }
-    
-    const newPosts = posts.filter(p => !scannedPosts.has(p.element));
-    
+
+    const newPosts = posts.filter((p) => !scannedPosts.has(p.element));
+
     if (newPosts.length === 0) {
-      console.log('No new posts found');
-      chrome.runtime.sendMessage({ action: 'scanComplete', count: 0 }).catch(() => {});
+      console.log("No new posts found");
+      chrome.runtime
+        .sendMessage({ action: "scanComplete", count: 0 })
+        .catch(() => {});
       isScanning = false;
       return;
     }
-    
+
     console.log(`📊 Found ${newPosts.length} new posts to analyze`);
-    chrome.runtime.sendMessage({ action: 'scanProgress', total: newPosts.length, current: 0 }).catch(() => {});
-    
+    chrome.runtime
+      .sendMessage({
+        action: "scanProgress",
+        total: newPosts.length,
+        current: 0,
+      })
+      .catch(() => {});
+
     let completed = 0;
     for (const post of newPosts) {
       await analyzePost(post.text, post.element);
       completed++;
-      
+
       if (completed % 3 === 0 || completed === newPosts.length) {
-        chrome.runtime.sendMessage({ action: 'scanProgress', total: newPosts.length, current: completed }).catch(() => {});
-        console.log(`📊 Progress: ${completed}/${newPosts.length} posts analyzed`);
+        chrome.runtime
+          .sendMessage({
+            action: "scanProgress",
+            total: newPosts.length,
+            current: completed,
+          })
+          .catch(() => {});
+        console.log(
+          `📊 Progress: ${completed}/${newPosts.length} posts analyzed`,
+        );
       }
-      
-      await new Promise(resolve => setTimeout(resolve, 200));
+
+      await new Promise((resolve) => setTimeout(resolve, 200));
     }
-    
+
     console.log(`✅ Scan complete: ${completed} posts analyzed`);
-    chrome.runtime.sendMessage({ action: 'scanComplete', count: completed }).catch(() => {});
-    
+    chrome.runtime
+      .sendMessage({ action: "scanComplete", count: completed })
+      .catch(() => {});
   } catch (error) {
-    console.error('Scan error:', error);
+    console.error("Scan error:", error);
   } finally {
     isScanning = false;
   }
@@ -262,41 +362,41 @@ async function scanAllPostsAsync() {
 
 async function analyzePost(text, element) {
   if (!autoDetectEnabled) return;
-  
+
   const platform = detectPlatform();
-  
+
   try {
     const response = await chrome.runtime.sendMessage({
-      action: 'detectText',
+      action: "detectText",
       text: text,
       url: window.location.href,
       platform: platform,
-      account_age: 365,
-      posting_frequency: 1,
-      type: 'post'
+      account_age: currentAccountAge,
+      posting_frequency: currentPostsPerDay,
+      type: "post",
     });
-    
+
     if (response && !response.error) {
       scannedPosts.set(element, response);
       console.log(`✅ Result: ${response.verdict} (${response.confidence})`);
-      
-      if (response.verdict === 'SCAM') {
+
+      if (response.verdict === "SCAM") {
         highlightPost(element, response, text);
       }
     }
   } catch (error) {
-    console.error('Error analyzing post:', error);
+    console.error("Error analyzing post:", error);
   }
 }
 
 function highlightPost(element, result, text) {
-  element.style.outline = '2px solid #f05252';
-  element.style.backgroundColor = 'rgba(240, 82, 82, 0.05)';
-  
-  if (!element.querySelector('.scamshield-badge')) {
-    const badge = document.createElement('span');
-    badge.className = 'scamshield-badge';
-    badge.textContent = '⚠️ SCAM';
+  element.style.outline = "2px solid #f05252";
+  element.style.backgroundColor = "rgba(240, 82, 82, 0.05)";
+
+  if (!element.querySelector(".scamshield-badge")) {
+    const badge = document.createElement("span");
+    badge.className = "scamshield-badge";
+    badge.textContent = "⚠️ SCAM";
     badge.style.cssText = `
       display: inline-block;
       background: #f05252;
@@ -307,16 +407,19 @@ function highlightPost(element, result, text) {
       margin-left: 8px;
       cursor: pointer;
     `;
-    badge.onclick = () => alert(`⚠️ SCAM DETECTED!\n\nConfidence: ${result.confidence}\n\nText: ${text.substring(0, 200)}`);
+    badge.onclick = () =>
+      alert(
+        `⚠️ SCAM DETECTED!\n\nConfidence: ${result.confidence}\n\nText: ${text.substring(0, 200)}`,
+      );
     element.prepend(badge);
   }
 }
 
 function clearHighlights() {
-  document.querySelectorAll('.scamshield-badge').forEach(b => b.remove());
-  document.querySelectorAll('[style*="outline"]').forEach(el => {
-    el.style.outline = '';
-    el.style.backgroundColor = '';
+  document.querySelectorAll(".scamshield-badge").forEach((b) => b.remove());
+  document.querySelectorAll('[style*="outline"]').forEach((el) => {
+    el.style.outline = "";
+    el.style.backgroundColor = "";
   });
 }
 
@@ -332,19 +435,21 @@ function startObserver() {
     }, 1500);
   });
   observer.observe(document.body, { childList: true, subtree: true });
-  console.log('👁 Observer started');
+  console.log("👁 Observer started");
 }
 
 async function init() {
-  const stored = await chrome.storage.local.get(['autoDetectEnabled']);
+  const stored = await chrome.storage.local.get(["autoDetectEnabled"]);
   autoDetectEnabled = stored.autoDetectEnabled !== false;
   currentPlatform = detectPlatform();
-  
-  console.log(`Platform: ${currentPlatform} | Auto-detect: ${autoDetectEnabled}`);
-  
+
+  console.log(
+    `Platform: ${currentPlatform} | Auto-detect: ${autoDetectEnabled}`,
+  );
+
   await extractUserMetadata();
-  
-  if (autoDetectEnabled && currentPlatform !== 'web') {
+
+  if (autoDetectEnabled && currentPlatform !== "web") {
     setTimeout(() => scanAllPostsAsync(), 3000);
     startObserver();
   }
