@@ -50,6 +50,7 @@ function QRContentTypeBadge({ type }) {
     url: { label: "URL / Link", color: "var(--warn)" },
     social_media_url: { label: "Social Media Link", color: "#185FA5" },
     media_file: { label: "Media File", color: "var(--danger)" },
+    payment_qr: { label: "Payment / E-Wallet", color: "var(--danger)" },
   };
   const info = map[type] || { label: type, color: "var(--text-muted)" };
   return (

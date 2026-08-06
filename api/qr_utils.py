@@ -20,6 +20,28 @@ SOCIAL_PATTERNS = {
     'youtube':  [r'youtube\.com', r'youtu\.be'],
 }
 
+# ── PAYMENT / E-WALLET / BANKING APPS ──
+# Domains and app deep-link schemes for common PH e-wallets and banks.
+# QR codes pointing at these are auto-rejected rather than scanned, since
+# a scam-detector scoring a payment redirect for "scam-like text" is not
+# a meaningful safety signal here — the risk is the money transfer itself.
+PAYMENT_PATTERNS = {
+    'gcash':        [r'gcash\.com', r'gcash://'],
+    'maya':         [r'paymaya\.com', r'maya\.ph', r'paymaya://', r'maya://'],
+    'gotyme':       [r'gotyme\.com\.ph', r'gotyme\.bank', r'gotyme://'],
+    'unionbank':    [r'unionbankph\.com', r'unionbank://'],
+    'bpi':          [r'bpi\.com\.ph', r'bpi://'],
+    'bdo':          [r'bdo\.com\.ph', r'bdo://'],
+    'metrobank':    [r'metrobank\.com\.ph', r'metrobank://'],
+    'landbank':     [r'landbank\.com', r'landbank://'],
+    'rcbc':         [r'rcbc\.com', r'rcbc://'],
+    'securitybank': [r'securitybank\.com', r'securitybank://'],
+    'coinsph':      [r'coins\.ph', r'coinsph://'],
+    'shopeepay':    [r'shopeepay\.ph', r'shopeepay://'],
+    'grabpay':      [r'grab\.com/.*(pay|wallet)', r'grabpay://'],
+    'palawanpay':   [r'palawanpay\.ph', r'palawanpay://'],
+}
+
 _MEDIA_MIME_PREFIXES = ('image/', 'video/', 'audio/')
 _MEDIA_MIME_EXACT = {
     'application/pdf', 'application/msword', 'application/vnd.ms-excel',
@@ -106,6 +128,47 @@ def _resolve_final_url_and_type(url: str, timeout: float = 5.0):
 def _is_media_content_type(content_type: str) -> bool:
     ct = content_type.split(';')[0].strip()
     return ct.startswith(_MEDIA_MIME_PREFIXES) or ct in _MEDIA_MIME_EXACT
+
+PAYMENT_DISPLAY_NAMES = {
+    'gcash': 'GCash', 'maya': 'Maya (PayMaya)', 'gotyme': 'GoTyme',
+    'unionbank': 'UnionBank', 'bpi': 'BPI', 'bdo': 'BDO',
+    'metrobank': 'Metrobank', 'landbank': 'Landbank', 'rcbc': 'RCBC',
+    'securitybank': 'Security Bank', 'coinsph': 'Coins.ph',
+    'shopeepay': 'ShopeePay', 'grabpay': 'GrabPay', 'palawanpay': 'PalawanPay',
+}
+
+def _match_payment_provider(*texts) -> str | None:
+    """Checks one or more strings against PAYMENT_PATTERNS and returns the
+    display name of the first matching provider, or None."""
+    for text in texts:
+        if not text:
+            continue
+        for provider, pats in PAYMENT_PATTERNS.items():
+            if any(re.search(pat, text, re.IGNORECASE) for pat in pats):
+                return PAYMENT_DISPLAY_NAMES.get(provider, provider.title())
+    return None
+
+def _is_emvco_payment_qr(content: str) -> bool:
+    """
+    Detects EMVCo-standard payment QR codes - the raw (non-URL) TLV payload
+    format used by GCash, Maya, GoTyme, and virtually all QR Ph / InstaPay-
+    compliant e-wallets and banks in the Philippines (and other EMVCo QR
+    markets, e.g. Singapore's SGQR, Thailand's PromptPay).
+
+    These always:
+      - start with tag "00" (Payload Format Indicator), value "01"
+      - end with tag "63" (CRC), length "04", + a 4-hex-char checksum
+    That combination is specific enough to reliably fingerprint a payment
+    payload without false-positiving on ordinary plain text.
+    """
+    c = content.strip()
+    if len(c) < 20:
+        return False
+    if not c.startswith("000201"):
+        return False
+    if not re.search(r'6304[0-9A-Fa-f]{4}$', c):
+        return False
+    return True
 
 def _looks_like_boilerplate(text: str) -> bool:
     return any(hint in text.lower() for hint in _BOILERPLATE_META_HINTS)
@@ -236,12 +299,35 @@ def _extract_page_info(url: str) -> dict:
 
 def classify_qr_content(content: str) -> dict:
     content = content.strip()
+
+    # ── PAYMENT QR (EMVCo/QR Ph raw payload — GCash, Maya, GoTyme, PH banks) ──
+    if _is_emvco_payment_qr(content):
+        return {
+            'type': 'payment_qr', 'platform': 'qr', 'is_media': False, 'is_payment': True,
+            'scan_text': None,
+            'note': 'This QR code is a payment/money-transfer QR (EMVCo / QR Ph format used by GCash, Maya, GoTyme, and other PH banks and e-wallets). Payment QR codes are not scanned for scam text — always verify the recipient name directly in your banking or e-wallet app before sending money.',
+            'url': None, 'original_url': None, 'used_redirect': False,
+        }
+
     data_uri_match = re.match(r'^data:([\w./+-]+);', content, re.IGNORECASE)
     if data_uri_match and _is_media_content_type(data_uri_match.group(1).lower()):
         return {'type': 'media_file', 'platform': 'qr', 'is_media': True, 'scan_text': None, 'note': f'This QR code embeds a media file directly ({data_uri_match.group(1)}). There is no text content to scan for scams.', 'url': None, 'original_url': None, 'used_redirect': False}
 
     is_url = content.startswith(('http://', 'https://', 'www.', 'ftp://'))
+
+    # ── PAYMENT QR (custom app deep-link scheme, e.g. gcash://, maya://) ──
+    # These use non-http URI schemes, so they must be checked here, before
+    # the plain_text fallback below - they'd never reach the later resolved-
+    # URL payment check since there's no http(s) URL to resolve.
     if not is_url:
+        provider = _match_payment_provider(content)
+        if provider:
+            return {
+                'type': 'payment_qr', 'platform': 'qr', 'is_media': False, 'is_payment': True,
+                'scan_text': None,
+                'note': f'This QR code opens a payment or e-wallet app ({provider}). Payment links are not scanned for scam text — always verify the recipient directly in your banking or e-wallet app before sending money.',
+                'url': None, 'original_url': content, 'used_redirect': False,
+            }
         return {'type': 'plain_text', 'platform': 'qr', 'is_media': False, 'scan_text': content, 'note': 'Plain text extracted from QR code.', 'url': None}
 
     original_content = content
@@ -279,6 +365,16 @@ def classify_qr_content(content: str) -> dict:
         ext = ''
 
     redirect_note = f' (resolved from shortener/redirect: {original_content})' if used_redirect else ''
+
+    matched_provider = _match_payment_provider(content, original_content)
+    if matched_provider:
+        return {
+            'type': 'payment_qr', 'platform': 'qr', 'is_media': False, 'is_payment': True,
+            'scan_text': None,
+            'note': f'This QR code links to a payment or e-wallet app ({matched_provider}){redirect_note}. Payment links are not scanned for scam text — always verify the recipient directly in your banking or e-wallet app before sending money.',
+            'url': content, 'original_url': original_content, 'used_redirect': used_redirect,
+        }
+
     is_media_by_ext  = ext in MEDIA_EXTENSIONS
     is_media_by_type = _is_media_content_type(content_type)
 

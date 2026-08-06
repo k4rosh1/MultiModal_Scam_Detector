@@ -26,7 +26,7 @@ async def scan_qr(request: Request, file: UploadFile = File(...)):
 
     classified = qr_utils.classify_qr_content(qr_content)
 
-    if classified["is_media"]:
+    if classified["is_media"] or classified.get("is_payment"):
         return {
             "qr_content":  qr_content,
             "content_type": classified["type"],
