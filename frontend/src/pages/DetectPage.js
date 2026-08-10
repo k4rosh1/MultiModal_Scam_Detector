@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useRef } from "react";
-import { predict, checkHealth, scanQR } from "../api";
+import React, { useState, useEffect } from "react";
+import { predict, checkHealth } from "../api";
 import "./DetectPage.css";
 
 const DEFAULT_META = {
@@ -8,6 +8,7 @@ const DEFAULT_META = {
   posting_frequency: 1.0,
 };
 
+// Converts a date string to number of days from that date until today
 function dateToDays(dateStr) {
   if (!dateStr) return 0;
   const joined = new Date(dateStr);
@@ -16,6 +17,7 @@ function dateToDays(dateStr) {
   return diff < 0 ? 0 : diff;
 }
 
+// Converts number of days back to a date string for the date picker display
 function daysToDate(days) {
   const d = new Date();
   d.setDate(d.getDate() - days);
@@ -43,26 +45,6 @@ function NumberField({ label, name, value, onChange, hint, min, max, step }) {
   );
 }
 
-// ── Content type label ────────────────────────────────────────────────────────
-function QRContentTypeBadge({ type }) {
-  const map = {
-    plain_text: { label: "Plain Text", color: "var(--accent)" },
-    url: { label: "URL / Link", color: "var(--warn)" },
-    social_media_url: { label: "Social Media Link", color: "#185FA5" },
-    media_file: { label: "Media File", color: "var(--danger)" },
-  };
-  const info = map[type] || { label: type, color: "var(--text-muted)" };
-  return (
-    <span
-      className="qr-type-badge"
-      style={{ borderColor: info.color, color: info.color }}
-    >
-      {info.label}
-    </span>
-  );
-}
-
-// ── Result card ───────────────────────────────────────────────────────────────
 function ResultCard({ result }) {
   const isScam = result.label === 1;
   const scamW = result.scam_prob;
@@ -77,7 +59,7 @@ function ResultCard({ result }) {
       )}
       {result.is_duplicate && (
         <div className="duplicate-banner">
-          ⚡ Cached result — this was scanned before. No duplicate saved to
+          ⚡ Cached result — this post was scanned before. No duplicate saved to
           database.
         </div>
       )}
@@ -90,13 +72,7 @@ function ResultCard({ result }) {
             {isScam ? "Scam Detected" : "Looks Legitimate"}
           </div>
           <div className="result-platform">
-            {result.platform === "facebook"
-              ? "Facebook"
-              : result.platform === "twitter"
-                ? "X (Twitter)"
-                : result.platform === "qr"
-                  ? "QR Code"
-                  : result.platform}
+            {result.platform === "facebook" ? "📘 Facebook" : "🐦 X (Twitter)"}
           </div>
         </div>
         <span className={`tag ${isScam ? "tag-scam" : "tag-legit"}`}>
@@ -143,189 +119,6 @@ function ResultCard({ result }) {
   );
 }
 
-// ── QR Upload tab ─────────────────────────────────────────────────────────────
-function QRUploadTab({ onResult, onError, onLoading }) {
-  const [file, setFile] = useState(null);
-  const [preview, setPreview] = useState(null);
-  const [dragging, setDragging] = useState(false);
-  const [qrInfo, setQrInfo] = useState(null); // decoded QR info before scan
-  const [rejected, setRejected] = useState(null); // rejection message
-  const fileRef = useRef();
-
-  const handleFile = (f) => {
-    if (!f) return;
-    const allowed = [
-      "image/png",
-      "image/jpeg",
-      "image/jpg",
-      "image/webp",
-      "image/bmp",
-      "image/gif",
-    ];
-    if (!allowed.includes(f.type)) {
-      onError(
-        "Invalid file type. Please upload a PNG, JPG, WEBP, or BMP image.",
-      );
-      return;
-    }
-    setFile(f);
-    setPreview(URL.createObjectURL(f));
-    setQrInfo(null);
-    setRejected(null);
-    onResult(null);
-    onError("");
-  };
-
-  const handleDrop = (e) => {
-    e.preventDefault();
-    setDragging(false);
-    const f = e.dataTransfer.files[0];
-    if (f) handleFile(f);
-  };
-
-  const handleScan = async () => {
-    if (!file) {
-      onError("Please upload a QR code image first.");
-      return;
-    }
-    onError("");
-    onLoading(true);
-    setQrInfo(null);
-    setRejected(null);
-    onResult(null);
-    try {
-      const res = await scanQR(file);
-
-      // Right here! We catch the rejection and fire off an alert
-      if (res.rejected) {
-        setRejected(res.note);
-        alert("Scan Rejected!\n\n" + res.note);
-        onLoading(false);
-        return;
-      }
-
-      setQrInfo({
-        raw: res.qr_content,
-        type: res.content_type,
-        note: res.note,
-        url: res.url,
-        scanned: res.scan_text,
-      });
-      onResult(res);
-    } catch (err) {
-      onError(
-        err.message ||
-          "QR scan failed. Make sure the image contains a clear QR code.",
-      );
-    } finally {
-      onLoading(false);
-    }
-  };
-
-  const handleReset = () => {
-    setFile(null);
-    setPreview(null);
-    setQrInfo(null);
-    setRejected(null);
-    onResult(null);
-    onError("");
-    if (fileRef.current) fileRef.current.value = "";
-  };
-
-  return (
-    <div className="qr-tab">
-      {/* Drop zone */}
-      <div
-        className={`qr-dropzone ${dragging ? "dragging" : ""} ${file ? "has-file" : ""}`}
-        onDragOver={(e) => {
-          e.preventDefault();
-          setDragging(true);
-        }}
-        onDragLeave={() => setDragging(false)}
-        onDrop={handleDrop}
-        onClick={() => fileRef.current?.click()}
-      >
-        {preview ? (
-          <img src={preview} alt="QR preview" className="qr-preview-img" />
-        ) : (
-          <>
-            <div className="qr-drop-icon"></div>
-            <p className="qr-drop-title">Upload QR Code Image</p>
-            <p className="qr-drop-sub">Drag & drop or click to browse</p>
-            <p className="qr-drop-hint">PNG, JPG, WEBP, BMP supported</p>
-          </>
-        )}
-        <input
-          ref={fileRef}
-          type="file"
-          accept="image/png,image/jpeg,image/jpg,image/webp,image/bmp,image/gif"
-          style={{ display: "none" }}
-          onChange={(e) => handleFile(e.target.files[0])}
-        />
-      </div>
-
-      {file && (
-        <div className="qr-file-info">
-          <span className="qr-file-name">📎 {file.name}</span>
-          <button className="qr-clear-btn" onClick={handleReset}>
-            ✕ Clear
-          </button>
-        </div>
-      )}
-
-      {/* Rejection message */}
-      {rejected && (
-        <div className="qr-rejected">
-          <div className="qr-rejected-icon"></div>
-          <p className="qr-rejected-title">Cannot Scan This Content</p>
-          <p className="qr-rejected-msg">{rejected}</p>
-        </div>
-      )}
-
-      {/* Decoded QR info — shown after scan */}
-      {qrInfo && (
-        <div className="qr-info-card">
-          <div className="qr-info-row">
-            <span className="qr-info-label">Content type</span>
-            <QRContentTypeBadge type={qrInfo.type} />
-          </div>
-          {qrInfo.url && (
-            <div className="qr-info-row">
-              <span className="qr-info-label">URL</span>
-              <span className="qr-info-value qr-url">{qrInfo.url}</span>
-            </div>
-          )}
-          <div className="qr-info-row">
-            <span className="qr-info-label">Raw QR content</span>
-            <span className="qr-info-value">{qrInfo.raw}</span>
-          </div>
-          <div className="qr-info-row">
-            <span className="qr-info-label">Scanned text</span>
-            <span className="qr-info-value">{qrInfo.scanned}</span>
-          </div>
-          <div className="qr-info-note">{qrInfo.note}</div>
-        </div>
-      )}
-
-      <div className="action-row" style={{ marginTop: 8 }}>
-        <button
-          className="btn btn-primary analyze-btn"
-          onClick={handleScan}
-          disabled={!file}
-        >
-          Scan QR Code
-        </button>
-        {file && (
-          <button className="btn btn-ghost" onClick={handleReset}>
-            Reset
-          </button>
-        )}
-      </div>
-    </div>
-  );
-}
-
-// ── Main DetectPage ───────────────────────────────────────────────────────────
 export default function DetectPage() {
   const [text, setText] = useState("");
   const [meta, setMeta] = useState(DEFAULT_META);
@@ -337,17 +130,17 @@ export default function DetectPage() {
   const [error, setError] = useState("");
   const [online, setOnline] = useState(null);
   const [tab, setTab] = useState("text");
-  // platform mode: 'facebook' | 'twitter' | 'qr'
-  const [mode, setMode] = useState("facebook");
 
   useEffect(() => {
     checkHealth().then((ok) => setOnline(ok));
   }, []);
 
+  // When user picks a date → auto-calculate days and update meta
   const handleDateChange = (e) => {
     const dateStr = e.target.value;
     setJoinedDate(dateStr);
-    setMeta((prev) => ({ ...prev, account_age: dateToDays(dateStr) }));
+    const days = dateToDays(dateStr);
+    setMeta((prev) => ({ ...prev, account_age: days }));
   };
 
   const handleMeta = (e) => {
@@ -364,17 +157,11 @@ export default function DetectPage() {
     setLoading(true);
     setResult(null);
     try {
-      const res = await predict({
-        text: text.trim(),
-        platform: mode,
-        account_age: meta.account_age,
-        posting_frequency: meta.posting_frequency,
-      });
+      const res = await predict({ text: text.trim(), ...meta });
       setResult(res);
-    } catch (err) {
+    } catch {
       setError(
-        err.message ||
-          "Cannot reach API. Make sure the server is running at http://localhost:8000",
+        "Cannot reach API. Make sure the server is running at http://localhost:8000",
       );
     } finally {
       setLoading(false);
@@ -392,7 +179,7 @@ export default function DetectPage() {
 
   const fillScamSample = () => {
     setText(
-      "GRABE! Kumita ako ng 50000 pesos sa loob ng 7 araw! DM mo ko para malaman kung paano! bit.ly/abc123",
+      "GRABE! Kumita ako ng 50000 pesos sa loob ng 7 araw! DM mo ko para malaman kung paano! 💰🔥 bit.ly/abc123",
     );
     const age = 30;
     setMeta((prev) => ({ ...prev, account_age: age, posting_frequency: 15.0 }));
@@ -412,8 +199,8 @@ export default function DetectPage() {
     setTimeout(() => setTab("text"), 1500);
   };
 
+  // Today's date as max for the date picker (can't join in the future)
   const today = new Date().toISOString().split("T")[0];
-  const isQR = mode === "qr";
 
   return (
     <div className="detect-page">
@@ -421,12 +208,12 @@ export default function DetectPage() {
         <div>
           <h1 className="page-title">Scam Detector</h1>
           <p className="page-sub">
-            Enter a post caption, provide account metadata, or upload a QR code.
+            Enter a post caption and account metadata to get a scam verdict.
           </p>
         </div>
         {online === false && (
           <div className="offline-banner">
-            API is offline — start the FastAPI server first
+            ⚠️ API is offline — start the FastAPI server first
           </div>
         )}
       </div>
@@ -434,220 +221,162 @@ export default function DetectPage() {
       <div className="detect-grid">
         {/* LEFT — Input */}
         <div className="input-panel">
-          {/* Platform / Mode selector */}
+          {/* Platform */}
           <div className="platform-selector">
             <button
-              className={`plat-btn ${mode === "facebook" ? "plat-active" : ""}`}
-              onClick={() => {
-                setMode("facebook");
-                setMeta((p) => ({ ...p, platform: "facebook" }));
-                setResult(null);
-                setError("");
-              }}
+              className={`plat-btn ${meta.platform === "facebook" ? "plat-active" : ""}`}
+              onClick={() => setMeta((p) => ({ ...p, platform: "facebook" }))}
             >
-              Facebook
+              📘 Facebook
             </button>
             <button
-              className={`plat-btn ${mode === "twitter" ? "plat-active" : ""}`}
-              onClick={() => {
-                setMode("twitter");
-                setMeta((p) => ({ ...p, platform: "twitter" }));
-                setResult(null);
-                setError("");
-              }}
+              className={`plat-btn ${meta.platform === "twitter" ? "plat-active" : ""}`}
+              onClick={() => setMeta((p) => ({ ...p, platform: "twitter" }))}
             >
-              X (Twitter)
-            </button>
-            <button
-              className={`plat-btn ${mode === "qr" ? "plat-active plat-qr" : ""}`}
-              onClick={() => {
-                setMode("qr");
-                setResult(null);
-                setError("");
-              }}
-            >
-              QR Code
+              🐦 X (Twitter)
             </button>
           </div>
 
-          {/* ── QR MODE ── */}
-          {isQR ? (
-            <>
-              <div className="qr-mode-notice">
-                Platform selection and account metadata are not required for QR
-                code scanning. Upload a QR code image and the system will
-                extract and analyze its content automatically.
-              </div>
-              {error && <div className="error-msg">{error}</div>}
-              <QRUploadTab
-                onResult={setResult}
-                onError={setError}
-                onLoading={setLoading}
+          {/* Tabs */}
+          <div className="tab-bar">
+            <button
+              className={`tab-btn ${tab === "text" ? "tab-active" : ""}`}
+              onClick={() => setTab("text")}
+            >
+              ✏️ Post Caption
+            </button>
+            <button
+              className={`tab-btn ${tab === "meta" ? "tab-active" : ""}`}
+              onClick={() => setTab("meta")}
+            >
+              👤 Account Metadata
+            </button>
+          </div>
+
+          {/* Tab: Post text */}
+          {tab === "text" && (
+            <div className="tab-content">
+              <label
+                className="field-label"
+                style={{ marginBottom: 8, display: "block" }}
+              >
+                Post / Caption Text
+                <span className="field-hint"> — Taglish supported</span>
+              </label>
+              <textarea
+                className="post-textarea"
+                placeholder={
+                  meta.platform === "facebook"
+                    ? "Paste a Facebook post here..."
+                    : "Paste a tweet here..."
+                }
+                value={text}
+                onChange={(e) => setText(e.target.value)}
+                rows={8}
               />
-            </>
-          ) : (
-            <>
-              {/* ── NORMAL MODE — Tabs ── */}
-              <div className="tab-bar">
+              <div className="char-count">{text.length} characters</div>
+              <div className="examples-wrap">
+                <span className="examples-label">Try an example:</span>
                 <button
-                  className={`tab-btn ${tab === "text" ? "tab-active" : ""}`}
-                  onClick={() => setTab("text")}
+                  className="example-btn scam-ex"
+                  onClick={fillScamSample}
                 >
-                  Post Caption
+                  🚨 Scam sample
                 </button>
                 <button
-                  className={`tab-btn ${tab === "meta" ? "tab-active" : ""}`}
-                  onClick={() => setTab("meta")}
+                  className="example-btn legit-ex"
+                  onClick={fillLegitSample}
                 >
-                  Account Metadata
+                  ✅ Legit sample
                 </button>
               </div>
-
-              {/* Text tab */}
-              {tab === "text" && (
-                <div className="tab-content">
-                  <label
-                    className="field-label"
-                    style={{ marginBottom: 8, display: "block" }}
-                  >
-                    Post / Caption Text
-                    <span className="field-hint"> — Taglish supported</span>
-                  </label>
-                  <textarea
-                    className="post-textarea"
-                    placeholder={
-                      mode === "facebook"
-                        ? "Paste a Facebook post here..."
-                        : "Paste a tweet here..."
-                    }
-                    value={text}
-                    onChange={(e) => setText(e.target.value)}
-                    rows={8}
-                  />
-                  <div className="char-count">{text.length} characters</div>
-                  <div className="examples-wrap">
-                    {/* <span className="examples-label">Try an example:</span>
-                    <button
-                      className="example-btn scam-ex"
-                      onClick={fillScamSample}
-                    >
-                      🚨 Scam sample
-                    </button>
-                    <button
-                      className="example-btn legit-ex"
-                      onClick={fillLegitSample}
-                    >
-                      ✅ Legit sample
-                    </button> */}
-                  </div>
-                </div>
-              )}
-
-              {/* Metadata tab */}
-              {tab === "meta" && (
-                <div className="tab-content meta-form">
-                  <div className="meta-section-title">Account Info</div>
-                  <div className="date-field-row">
-                    <span className="date-field-label">
-                      Account Joined Date
-                    </span>
-                    <span className="date-field-hint">
-                      Pick the date the account was created
-                    </span>
-                    <input
-                      type="date"
-                      className="date-input"
-                      value={joinedDate}
-                      max={today}
-                      onChange={handleDateChange}
-                    />
-                  </div>
-                  <div className="days-display">
-                    <span className="days-label">Account age in days</span>
-                    <div className="days-value-wrap">
-                      <span className="days-formula">
-                        Today − Joined Date =
-                      </span>
-                      <span className="days-value">
-                        {meta.account_age} days
-                      </span>
-                    </div>
-                  </div>
-                  <div className="meta-section-title" style={{ marginTop: 20 }}>
-                    Activity
-                  </div>
-                  <NumberField
-                    label="Posts per Day"
-                    name="posting_frequency"
-                    value={meta.posting_frequency}
-                    onChange={handleMeta}
-                    hint="Average posting frequency"
-                    min={0}
-                    max={100}
-                    step={0.1}
-                  />
-                </div>
-              )}
-
-              {error && <div className="error-msg">{error}</div>}
-
-              <div className="action-row">
-                <button
-                  className="btn btn-primary analyze-btn"
-                  onClick={handleSubmit}
-                  disabled={loading || !text.trim()}
-                >
-                  {loading ? (
-                    <>
-                      <span className="spinner" /> Analysing...
-                    </>
-                  ) : (
-                    <>Analyse Post</>
-                  )}
-                </button>
-                <button className="btn btn-ghost" onClick={handleReset}>
-                  Reset
-                </button>
-              </div>
-            </>
+            </div>
           )}
+
+          {/* Tab: Metadata */}
+          {tab === "meta" && (
+            <div className="tab-content meta-form">
+              <div className="meta-section-title">📅 Account Info</div>
+
+              {/* Date picker — user picks join date, days calculated automatically */}
+              <div className="date-field-row">
+                <span className="date-field-label">Account Joined Date</span>
+                <span className="date-field-hint">
+                  Pick the date the account was created
+                </span>
+                <input
+                  type="date"
+                  className="date-input"
+                  value={joinedDate}
+                  max={today}
+                  onChange={handleDateChange}
+                />
+              </div>
+
+              {/* Auto-calculated result — shown below the date picker */}
+              <div className="days-display">
+                <span className="days-label">Account age in days</span>
+                <div className="days-value-wrap">
+                  <span className="days-formula">Today − Joined Date =</span>
+                  <span className="days-value">{meta.account_age} days</span>
+                </div>
+              </div>
+
+              <div className="meta-section-title" style={{ marginTop: 20 }}>
+                📊 Activity
+              </div>
+              <NumberField
+                label="Posts per Day"
+                name="posting_frequency"
+                value={meta.posting_frequency}
+                onChange={handleMeta}
+                hint="Average posting frequency"
+                min={0}
+                max={100}
+                step={0.1}
+              />
+            </div>
+          )}
+
+          {error && <div className="error-msg">⚠️ {error}</div>}
+
+          <div className="action-row">
+            <button
+              className="btn btn-primary analyze-btn"
+              onClick={handleSubmit}
+              disabled={loading || !text.trim()}
+            >
+              {loading ? (
+                <>
+                  <span className="spinner" /> Analysing...
+                </>
+              ) : (
+                <>🔍 Analyse Post</>
+              )}
+            </button>
+            <button className="btn btn-ghost" onClick={handleReset}>
+              Reset
+            </button>
+          </div>
         </div>
 
         {/* RIGHT — Result */}
         <div className="result-panel">
           {!result && !loading && (
             <div className="result-placeholder">
-              <div className="placeholder-icon">{isQR ? "" : ""}</div>
+              <div className="placeholder-icon">🛡️</div>
               <p className="placeholder-title">Ready to analyse</p>
               <p className="placeholder-sub">
-                {isQR
-                  ? "Upload a QR code image and click Scan QR Code."
-                  : "Enter a post caption and click Analyse Post."}
+                Enter a post caption and click <strong>Analyse Post</strong>.
               </p>
               <div className="placeholder-tips">
-                {isQR ? (
-                  <>
-                    <div className="tip">
-                      Supports text, URLs, and social media links inside QR
-                    </div>
-                    <div className="tip">
-                      Pure image or video QR codes will be rejected
-                    </div>
-                    <div className="tip">
-                      Social media URLs: post caption auto-extracted
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div className="tip">
-                      Pick the account's join date for accuracy
-                    </div>
-                    <div className="tip">
-                      Supports Tagalog, English, and Taglish
-                    </div>
-                    <div className="tip">Powered by mBERT + Early Fusion</div>
-                  </>
-                )}
+                <div className="tip">
+                  💡 Pick the account's join date for accuracy
+                </div>
+                <div className="tip">
+                  🌐 Supports Tagalog, English, and Taglish
+                </div>
+                <div className="tip">⚡ Powered by mBERT + Early Fusion</div>
               </div>
             </div>
           )}
@@ -655,13 +384,9 @@ export default function DetectPage() {
           {loading && (
             <div className="result-placeholder">
               <div className="big-spinner" />
-              <p className="placeholder-title">
-                {isQR ? "Scanning QR code..." : "Analysing post..."}
-              </p>
+              <p className="placeholder-title">Analysing post...</p>
               <p className="placeholder-sub">
-                {isQR
-                  ? "Decoding QR → extracting content → running detection"
-                  : "Running mBERT encoder + metadata fusion"}
+                Running mBERT encoder + metadata fusion
               </p>
             </div>
           )}
@@ -669,34 +394,33 @@ export default function DetectPage() {
           {result && !loading && (
             <div style={{ animation: "fadeInUp 0.35s ease" }}>
               <ResultCard result={result} />
-              {!isQR && (
-                <div className="summary-card card" style={{ marginTop: 16 }}>
-                  <div className="summary-title">Input Summary</div>
-                  <div className="summary-grid">
-                    {[
-                      {
-                        label: "Platform",
-                        value: mode === "facebook" ? "Facebook" : "X",
-                      },
-                      { label: "Joined Date", value: joinedDate },
-                      { label: "Acct Age", value: `${meta.account_age} days` },
-                      { label: "Posts/Day", value: meta.posting_frequency },
-                    ].map(({ label, value }) => (
-                      <div className="summary-item" key={label}>
-                        <span className="s-label">{label}</span>
-                        <span className="s-value">{value}</span>
-                      </div>
-                    ))}
-                  </div>
-                  <div className="summary-text">
-                    <span className="s-label">Analysed text:</span>
-                    <p className="s-text-preview">
-                      "{text.substring(0, 120)}
-                      {text.length > 120 ? "…" : ""}"
-                    </p>
-                  </div>
+              <div className="summary-card card" style={{ marginTop: 16 }}>
+                <div className="summary-title">📋 Input Summary</div>
+                <div className="summary-grid">
+                  {[
+                    {
+                      label: "Platform",
+                      value:
+                        meta.platform === "facebook" ? "📘 Facebook" : "🐦 X",
+                    },
+                    { label: "Joined Date", value: joinedDate },
+                    { label: "Acct Age", value: `${meta.account_age} days` },
+                    { label: "Posts/Day", value: meta.posting_frequency },
+                  ].map(({ label, value }) => (
+                    <div className="summary-item" key={label}>
+                      <span className="s-label">{label}</span>
+                      <span className="s-value">{value}</span>
+                    </div>
+                  ))}
                 </div>
-              )}
+                <div className="summary-text">
+                  <span className="s-label">Analysed text:</span>
+                  <p className="s-text-preview">
+                    "{text.substring(0, 120)}
+                    {text.length > 120 ? "…" : ""}"
+                  </p>
+                </div>
+              </div>
             </div>
           )}
         </div>

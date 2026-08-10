@@ -52,7 +52,7 @@ print(f"Using device: {DEVICE}")
 
 # ── STEP 1: LOAD DATASET ──────────────────────────────────────────────────────
 print("\n[1/8] Loading dataset...")
-df = pd.read_csv("merged_real_dataset.csv")
+df = pd.read_csv("scam_dataset.csv")
 print(f"   Total samples: {len(df)}  |  Scam: {df['label'].sum()}  |  Legit: {(df['label']==0).sum()}")
 
 # Separate text, metadata, and labels
@@ -165,44 +165,27 @@ class TextOnlyBaseline(nn.Module):
 # ── Model B: Multi-Modal Early Fusion (770-dim) ───────────────────────────────
 class EarlyFusionScamDetector(nn.Module):
     """
-    Multi-modal model with a learned metadata projection (instead of raw
-    concatenation) and modality dropout, to prevent the 768-dim text
-    embedding from drowning out the 2-dim metadata signal.
+    Proposed multi-modal model.
+    Concatenates 768-dim mBERT [CLS] vector with 2 normalized metadata values
+    to produce a 770-dim unified feature vector.
+    Single fully connected layer + softmax for binary classification.
     """
-    def __init__(self, bert_model_name, meta_dropout_p=0.15):
+    def __init__(self, bert_model_name):
         super().__init__()
         self.bert = AutoModel.from_pretrained(bert_model_name)
 
-        # Metadata gets its own small MLP so it has comparable
-        # representational capacity to the 768-dim text embedding.
-        self.meta_proj = nn.Sequential(
-            nn.Linear(2, 32),
-            nn.ReLU(),
-            nn.Linear(32, 32),
-        )
+        # Single FC layer: 770 (768 text + 2 metadata) → 2 classes
+        self.classifier = nn.Linear(768 + 2, 2)
 
-        # Fused: 768 (text) + 32 (projected metadata) = 800
-        self.classifier = nn.Linear(768 + 32, 2)
-
-        self.meta_dropout_p = meta_dropout_p
-
-    def forward(self, input_ids, attention_mask, metadata, training=False):
+    def forward(self, input_ids, attention_mask, metadata):
+        # Step 1: Extract [CLS] token → 768-dim semantic vector
         bert_out      = self.bert(input_ids=input_ids, attention_mask=attention_mask)
         cls_embedding = bert_out.last_hidden_state[:, 0, :]   # [batch, 768]
 
-        meta_features = self.meta_proj(metadata)              # [batch, 32]
+        # Step 2: Early Fusion — concatenate CLS vector with 2 metadata values
+        fused = torch.cat([cls_embedding, metadata], dim=1)   # [batch, 770]
 
-        # Modality dropout: during training, randomly zero out the TEXT
-        # embedding for a fraction of samples, forcing the model to learn
-        # to classify from metadata alone on those samples.
-        if training:
-            batch_size = cls_embedding.size(0)
-            drop_mask  = torch.rand(batch_size, device=cls_embedding.device) < self.meta_dropout_p
-            if drop_mask.any():
-                cls_embedding = cls_embedding.clone()
-                cls_embedding[drop_mask] = 0.0
-
-        fused = torch.cat([cls_embedding, meta_features], dim=1)  # [batch, 800]
+        # Step 3: Single FC layer → logits
         return self.classifier(fused)
 
 
@@ -214,29 +197,20 @@ def train_model(model, train_loader, val_loader, model_name="Model"):
     """
     model.to(DEVICE)
 
-    is_multimodal = hasattr(model, "meta_proj")
+    # AdamW optimizer with learning rate 2e-5
+    optimizer = torch.optim.AdamW(model.parameters(), lr=LR, weight_decay=0.01)
 
-    # Give the metadata branch a higher learning rate than BERT, since its
-    # gradients are much smaller/noisier per step relative to a 110M-param
-    # transformer being fine-tuned at the same time.
-    if is_multimodal:
-        optimizer = torch.optim.AdamW([
-            {"params": model.bert.parameters(),       "lr": LR},
-            {"params": model.meta_proj.parameters(),  "lr": 1e-3},
-            {"params": model.classifier.parameters(), "lr": 1e-3},
-        ], weight_decay=0.01)
-    else:
-        optimizer = torch.optim.AdamW(model.parameters(), lr=LR, weight_decay=0.01)
-
+    # CrossEntropyLoss as the loss function
     loss_fn   = nn.CrossEntropyLoss()
 
     history    = {"train_loss": [], "val_loss": [], "val_acc": [], "val_f1": []}
     best_f1    = 0.0
     best_state = None
 
+    # Train for fixed 5 epochs
     for epoch in range(EPOCHS):
 
-        # ── Training phase ────────────────────────────────────────────────
+        # ── Training phase ────────────────────────────────────────────────────
         model.train()
         total_loss = 0
         for batch in tqdm(train_loader, desc=f"[{model_name}] Epoch {epoch+1}/{EPOCHS} Train"):
@@ -246,20 +220,18 @@ def train_model(model, train_loader, val_loader, model_name="Model"):
             labels         = batch['label'].to(DEVICE)
 
             optimizer.zero_grad()
-            if is_multimodal:
-                logits = model(input_ids, attention_mask, metadata, training=True)
-            else:
-                logits = model(input_ids, attention_mask, metadata)
+            logits = model(input_ids, attention_mask, metadata)
             loss   = loss_fn(logits, labels)
             loss.backward()
 
+            # Gradient clipping to prevent exploding gradients
             torch.nn.utils.clip_grad_norm_(model.parameters(), max_norm=1.0)
             optimizer.step()
             total_loss += loss.item()
 
         avg_train_loss = total_loss / len(train_loader)
 
-        # ── Validation phase ──────────────────────────────────────────────
+        # ── Validation phase ──────────────────────────────────────────────────
         model.eval()
         val_loss, all_preds, all_labels = 0, [], []
         with torch.no_grad():
@@ -288,6 +260,7 @@ def train_model(model, train_loader, val_loader, model_name="Model"):
         print(f"   Epoch {epoch+1}/{EPOCHS}: train_loss={avg_train_loss:.4f} | "
               f"val_loss={avg_val_loss:.4f} | val_acc={val_acc:.4f} | val_f1={val_f1:.4f}")
 
+        # Save best checkpoint based on validation F1
         if val_f1 > best_f1:
             best_f1    = val_f1
             best_state = {k: v.clone() for k, v in model.state_dict().items()}
@@ -300,6 +273,7 @@ def train_model(model, train_loader, val_loader, model_name="Model"):
             }, f"./checkpoints/{model_name}_best.pt")
             print(f"   💾 Best checkpoint saved! Epoch {epoch+1} | F1={best_f1:.4f}")
 
+    # Restore best model weights before returning
     if best_state:
         model.load_state_dict(best_state)
 

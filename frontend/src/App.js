@@ -1,8 +1,9 @@
 import React, { useEffect, useState, useRef } from "react";
-import { BrowserRouter, Routes, Route, NavLink } from "react-router-dom";
+import { BrowserRouter, Routes, Route, NavLink, useLocation } from "react-router-dom";
 import DetectPage from "./pages/DetectPage";
 import DashboardPage from "./pages/DashboardPage";
 import HistoryPage from "./pages/HistoryPage";
+import PromoPage from "./pages/PromoPage";
 import { checkHealth } from "./api";
 import "./App.css";
 
@@ -38,11 +39,11 @@ function Navbar({ theme, toggleTheme }) {
   }, []);
 
   return (
-    <nav className="navbar">
+    <nav className={`navbar ${theme === 'light' ? 'navbar-light' : 'navbar-dark'}`}>
       <div className="navbar-brand">
         <div className="brand-icon">🛡</div>
         <div>
-          <div className="brand-name">ScamShield</div>
+          <div className="brand-name">Protego</div>
           <div className="brand-sub">mBERT · Early Fusion · Taglish</div>
         </div>
       </div>
@@ -55,7 +56,15 @@ function Navbar({ theme, toggleTheme }) {
           }
           end
         >
-          Detect
+          🏠 Home
+        </NavLink>
+        <NavLink
+          to="/detect"
+          className={({ isActive }) =>
+            isActive ? "nav-link active" : "nav-link"
+          }
+        >
+          🔍 Detect
         </NavLink>
         <NavLink
           to="/dashboard"
@@ -63,7 +72,7 @@ function Navbar({ theme, toggleTheme }) {
             isActive ? "nav-link active" : "nav-link"
           }
         >
-          Dashboard
+          📊 Dashboard
         </NavLink>
         <NavLink
           to="/history"
@@ -71,7 +80,7 @@ function Navbar({ theme, toggleTheme }) {
             isActive ? "nav-link active" : "nav-link"
           }
         >
-          History
+          🗂 History
         </NavLink>
       </div>
 
@@ -100,6 +109,26 @@ function Navbar({ theme, toggleTheme }) {
   );
 }
 
+function AppContent({ theme, toggleTheme }) {
+  const location = useLocation();
+  // Hide navbar on Home (promo) page only - Detect page shows its own header with navbar
+  const hideNavbar = location.pathname === "/";
+
+  return (
+    <>
+      {!hideNavbar && <Navbar theme={theme} toggleTheme={toggleTheme} />}
+      <main className={location.pathname === "/" ? "promo-main" : "app-main"}>
+        <Routes>
+          <Route path="/" element={<PromoPage />} />
+          <Route path="/detect" element={<DetectPage />} />
+          <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/history" element={<HistoryPage />} />
+        </Routes>
+      </main>
+    </>
+  );
+}
+
 export default function App() {
   const [theme, setTheme] = useState(() => {
     return localStorage.getItem("scamshield-theme") || "dark";
@@ -114,14 +143,7 @@ export default function App() {
 
   return (
     <BrowserRouter>
-      <Navbar theme={theme} toggleTheme={toggleTheme} />
-      <main className="app-main">
-        <Routes>
-          <Route path="/" element={<DetectPage />} />
-          <Route path="/dashboard" element={<DashboardPage />} />
-          <Route path="/history" element={<HistoryPage />} />
-        </Routes>
-      </main>
+      <AppContent theme={theme} toggleTheme={toggleTheme} />
     </BrowserRouter>
   );
 }
