@@ -15,9 +15,9 @@ const API_URL = 'http://localhost:8000';
 
 const scanProfileBtn = document.getElementById('scanProfileBtn');
 const profileScanStatus = document.getElementById('profileScanStatus');
-const accountAgeSpan = document.getElementById('accountAge');
-const postsPerDaySpan = document.getElementById('postsPerDay');
-const lastActiveSpan = document.getElementById('lastActive');
+const platformSpan = document.getElementById('platform');
+const postsFoundSpan = document.getElementById('postsFound');
+const scanStatusSpan = document.getElementById('scanStatus');
 
 const resultSection = document.getElementById('resultSection');
 const resultIcon = document.getElementById('resultIcon');
@@ -31,17 +31,14 @@ const REACT_APP_URL = 'http://localhost:3000';
 const DASHBOARD_URL = `${REACT_APP_URL}/dashboard`;  
 const HISTORY_URL = `${REACT_APP_URL}/history`; 
 
+// Text-only sample data (removed metadata)
 const SCAM_SAMPLE = {
   text: "GRABE! Kumita ako ng 50000 pesos sa loob ng 7 araw! DM mo ko para malaman kung paano! bit.ly/abc123",
-  account_age: 30,
-  posting_frequency: 15.0,
   platform: 'facebook'
 };
 
 const LEGIT_SAMPLE = {
-  text: "Kumain kami ni Maria sa Jollibee kanina. Masarap pa rin ang Chickenjoy! Highly recommend ",
-  account_age: 800,
-  posting_frequency: 1.2,
+  text: "Kumain kami ni Maria sa Jollibee kanina. Masarap pa rin ang Chickenjoy! Highly recommend 😄",
   platform: 'facebook'
 };
 
@@ -97,9 +94,8 @@ async function detectSampleText(sampleData, isScamSample) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         text: sampleData.text,
-        platform: sampleData.platform,
-        account_age: sampleData.account_age,
-        posting_frequency: sampleData.posting_frequency
+        platform: sampleData.platform
+        // Removed: account_age, posting_frequency
       })
     });
     
@@ -232,11 +228,11 @@ function showProfileStatus(message, type) {
   }
 }
 
-function updateProfileInfo(accountAge, postsPerDay, lastActive) {
-  if (accountAgeSpan) accountAgeSpan.textContent = accountAge;
-  if (postsPerDaySpan) postsPerDaySpan.textContent = postsPerDay;
-  if (lastActiveSpan) lastActiveSpan.textContent = lastActive;
-  console.log('Profile info updated:', { accountAge, postsPerDay, lastActive });
+function updateProfileInfo(platform, postsFound, status) {
+  if (platformSpan) platformSpan.textContent = platform;
+  if (postsFoundSpan) postsFoundSpan.textContent = postsFound;
+  if (scanStatusSpan) scanStatusSpan.textContent = status;
+  console.log('Profile info updated:', { platform, postsFound, status });
 }
 
 async function getCurrentTab() {
@@ -301,9 +297,9 @@ async function loadProfileInfoOnOpen() {
     if (response && response.profileInfo) {
       console.log('✅ Received metadata:', response.profileInfo);
       updateProfileInfo(
-        response.profileInfo.accountAge || 'Unknown',
-        response.profileInfo.postsPerDay || 'Unknown',
-        response.profileInfo.lastActive || 'Unknown'
+        response.profileInfo.platform || 'Unknown',
+        response.profileInfo.postsFound || 'Unknown',
+        response.profileInfo.status || 'Ready'
       );
     } else {
       console.log('No profile info received');
@@ -364,9 +360,9 @@ async function scanCurrentProfile() {
     
     if (profileResponse && profileResponse.profileInfo) {
       updateProfileInfo(
-        profileResponse.profileInfo.accountAge || 'Unknown',
-        profileResponse.profileInfo.postsPerDay || 'Unknown',
-        profileResponse.profileInfo.lastActive || 'Unknown'
+        profileResponse.profileInfo.platform || 'Unknown',
+        profileResponse.profileInfo.postsFound || 'Unknown',
+        'Scanning...'
       );
     }
     
@@ -377,6 +373,11 @@ async function scanCurrentProfile() {
     setTimeout(() => {
       scanProfileBtn.innerHTML = originalText;
       scanProfileBtn.disabled = false;
+      updateProfileInfo(
+        'Facebook/Twitter',
+        'Scan complete',
+        'Ready'
+      );
     }, 2000);
     
   } catch (error) {

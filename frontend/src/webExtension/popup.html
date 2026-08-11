@@ -2,14 +2,14 @@
 <html>
 <head>
   <meta charset="utf-8">
-  <title>ScamShield Detector</title>
+  <title>Protego Detector</title>
   <link rel="stylesheet" href="popup.css">
 </head>
 <body>
   <div class="container">
     <div class="header">
-      <h1>ScamShield</h1>
-      <span class="badge">AI-Powered</span>
+      <h1>🛡 Protego</h1>
+      <span class="badge">Text-Only</span>
     </div>
     
     <div class="auto-detect-toggle">
@@ -19,38 +19,31 @@
           <span class="toggle-status">✅ ON</span>
         </button>
       </div>
-      <p class="toggle-description">When ON, automatically scans posts and profiles for scams. When OFF, only manual scans work.</p>
+      <p class="toggle-description">When ON, automatically scans posts for scams. When OFF, only manual scans work.</p>
     </div>
     
     <div class="profile-scan-section">
-      <h2 class="section-title">👤 Profile & Page Scanner</h2>
+      <h2 class="section-title">🔍 Page Scanner</h2>
       
       <div class="profile-info">
         <div class="info-card">
-          <div class="info-icon">📊</div>
-          <div class="info-text">
-            <span class="info-label">Account Age:</span>
-            <span id="accountAge" class="info-value">-- days</span>
-          </div>
-        </div>
-        <div class="info-card">
           <div class="info-icon">📝</div>
           <div class="info-text">
-            <span class="info-label">Posts per Day:</span>
-            <span id="postsPerDay" class="info-value">--</span>
+            <span class="info-label">Posts Found:</span>
+            <span id="postsFound" class="info-value">--</span>
           </div>
         </div>
         <div class="info-card">
           <div class="info-icon">🕒</div>
           <div class="info-text">
-            <span class="info-label">Last Active:</span>
-            <span id="lastActive" class="info-value">--</span>
+            <span class="info-label">Status:</span>
+            <span id="scanStatus" class="info-value">Ready</span>
           </div>
         </div>
       </div>
       
       <button id="scanProfileBtn" class="btn-scan-profile">
-        🔍 Scan This Page / User
+        🔍 Scan This Page
       </button>
       <div id="profileScanStatus" class="profile-scan-status" style="display: none;"></div>
     </div>

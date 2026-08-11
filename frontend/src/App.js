@@ -44,7 +44,7 @@ function Navbar({ theme, toggleTheme }) {
         <div className="brand-icon">🛡</div>
         <div>
           <div className="brand-name">Protego</div>
-          <div className="brand-sub">mBERT · Early Fusion · Taglish</div>
+          <div className="brand-sub">mBERT · Text-Only · Taglish</div>
         </div>
       </div>
 
@@ -131,12 +131,12 @@ function AppContent({ theme, toggleTheme }) {
 
 export default function App() {
   const [theme, setTheme] = useState(() => {
-    return localStorage.getItem("scamshield-theme") || "dark";
+    return localStorage.getItem("protego-theme") || "dark";
   });
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
-    localStorage.setItem("scamshield-theme", theme);
+    localStorage.setItem("protego-theme", theme);
   }, [theme]);
 
   const toggleTheme = () => setTheme((t) => (t === "dark" ? "light" : "dark"));

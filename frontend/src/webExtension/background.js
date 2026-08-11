@@ -60,7 +60,7 @@ async function clearHistory() {
 }
 
 chrome.runtime.onInstalled.addListener(async () => {
-  console.log('ScamShield Extension Installed');
+  console.log('Protego Extension Installed');
   
   const settings = await chrome.storage.local.get(DEFAULT_SETTINGS);
   if (Object.keys(settings).length === 0 || settings.autoDetectEnabled === undefined) {
@@ -146,10 +146,8 @@ async function detectScam(text, url, platform = 'web', type = 'post') {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         text: text.substring(0, 1000),
-        platform: platform,
-        account_age: 365,
-        posting_frequency: 1,
-        url: url || null
+        platform: platform
+        // Removed: account_age, posting_frequency, url
       })
     });
     
@@ -207,4 +205,4 @@ async function updateSettings(newSettings) {
   }
 }
 
-console.log('ScamShield background service worker started');
+console.log('Protego background service worker started (Text-Only)');
