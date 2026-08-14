@@ -2,7 +2,7 @@ import re
 import cv2
 import numpy as np_cv
 import requests as http_requests
-from urllib.parse import urlparse
+from urllib.parse import urlparse, quote
 import html as _html_module
 
 MEDIA_EXTENSIONS = {
@@ -187,7 +187,7 @@ def _extract_page_info(url: str) -> dict:
     is_youtube = bool(re.search(r'(youtube\.com|youtu\.be)', url, re.IGNORECASE))
     if is_youtube:
         try:
-            oembed_url = f"https://www.youtube.com/oembed?url={url}&format=json"
+            oembed_url = f"https://www.youtube.com/oembed?url={quote(url, safe='')}&format=json"
             yt_resp = http_requests.get(oembed_url, timeout=5)
             if yt_resp.status_code == 200:
                 data = yt_resp.json()
@@ -202,7 +202,7 @@ def _extract_page_info(url: str) -> dict:
     if is_twitter:
         try:
             safe_url = url.replace('x.com', 'twitter.com')
-            oembed_url = f"https://publish.twitter.com/oembed?url={safe_url}"
+            oembed_url = f"https://publish.twitter.com/oembed?url={quote(safe_url, safe='')}"
             tw_resp = http_requests.get(oembed_url, timeout=5)
             if tw_resp.status_code == 200:
                 data = tw_resp.json()

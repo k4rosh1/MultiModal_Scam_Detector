@@ -176,7 +176,6 @@ export default function HistoryPage() {
                 <th>Confidence</th>
                 <th>Scam %</th>
                 <th>Legit %</th>
-                <th>Mock?</th>
                 <th>Timestamp</th>
               </tr>
             </thead>
@@ -240,7 +239,6 @@ export default function HistoryPage() {
                         ? parseFloat(r.legit_prob).toFixed(1) + "%"
                         : "—"}
                     </td>
-                    <td className="mono-cell">{r.is_mock ? "🟡" : "✅"}</td>
                     <td className="ts-cell">{ts}</td>
                   </tr>
                 );

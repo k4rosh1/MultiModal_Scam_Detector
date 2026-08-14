@@ -31,7 +31,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       sendResponse({ status: "already_scanning" });
       return true;
     }
-    scanAllPostsAsync();
+    scanAllPostsAsync(request.manual === true);
     sendResponse({ status: "started" });
     return true;
   }
@@ -281,7 +281,7 @@ function getTwitterPosts() {
   return posts;
 }
 
-async function scanAllPostsAsync() {
+async function scanAllPostsAsync(manual = false) {
   if (isScanning) {
     console.log("Already scanning, skipping");
     return;
@@ -330,7 +330,7 @@ async function scanAllPostsAsync() {
 
     let completed = 0;
     for (const post of newPosts) {
-      await analyzePost(post.text, post.element);
+      await analyzePost(post.text, post.element, manual);
       completed++;
 
       if (completed % 3 === 0 || completed === newPosts.length) {
@@ -360,8 +360,8 @@ async function scanAllPostsAsync() {
   }
 }
 
-async function analyzePost(text, element) {
-  if (!autoDetectEnabled) return;
+async function analyzePost(text, element, manual = false) {
+  if (!manual && !autoDetectEnabled) return;
 
   const platform = detectPlatform();
 
@@ -374,6 +374,7 @@ async function analyzePost(text, element) {
       account_age: currentAccountAge,
       posting_frequency: currentPostsPerDay,
       type: "post",
+      manual: manual,
     });
 
     if (response && !response.error) {

@@ -128,6 +128,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       request.type || "post",
       request.account_age,
       request.posting_frequency,
+      request.manual === true,
     )
       .then((result) => sendResponse(result))
       .catch((error) =>
@@ -161,8 +162,9 @@ async function detectScam(
   type = "post",
   accountAge,
   postingFrequency,
+  manual = false,
 ) {
-  if (!autoDetectEnabled && type !== "manual") {
+  if (!manual && !autoDetectEnabled) {
     return { verdict: "SKIPPED", confidence: 0 };
   }
 

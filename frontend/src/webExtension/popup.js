@@ -362,10 +362,7 @@ async function scanCurrentProfile() {
       url.includes("x.com");
 
     if (!isSocialMedia) {
-      showProfileStatus(
-        "This feature only works on Facebook or Twitter",
-        "error",
-      );
+      showProfileStatus("This feature only works on Twitter", "error");
       scanProfileBtn.innerHTML = originalText;
       scanProfileBtn.disabled = false;
       return;
