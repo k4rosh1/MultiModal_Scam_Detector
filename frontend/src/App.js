@@ -41,7 +41,7 @@ function Navbar({ theme, toggleTheme }) {
   return (
     <nav className={`navbar ${theme === 'light' ? 'navbar-light' : 'navbar-dark'}`}>
       <div className="navbar-brand">
-        <div className="brand-icon">🛡</div>
+        <div className="brand-icon">P</div>
         <div>
           <div className="brand-name">Protego</div>
           <div className="brand-sub">mBERT · Text-Only · Taglish</div>
@@ -56,7 +56,7 @@ function Navbar({ theme, toggleTheme }) {
           }
           end
         >
-          🏠 Home
+          Home
         </NavLink>
         <NavLink
           to="/detect"
@@ -64,7 +64,7 @@ function Navbar({ theme, toggleTheme }) {
             isActive ? "nav-link active" : "nav-link"
           }
         >
-          🔍 Detect
+          Detect
         </NavLink>
         <NavLink
           to="/dashboard"
@@ -72,7 +72,7 @@ function Navbar({ theme, toggleTheme }) {
             isActive ? "nav-link active" : "nav-link"
           }
         >
-          📊 Dashboard
+          Dashboard
         </NavLink>
         <NavLink
           to="/history"
@@ -80,7 +80,7 @@ function Navbar({ theme, toggleTheme }) {
             isActive ? "nav-link active" : "nav-link"
           }
         >
-          🗂 History
+          History
         </NavLink>
       </div>
 

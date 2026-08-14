@@ -1,48 +1,44 @@
 /* ================================================================
-   DASHBOARD PAGE — LIGHT/DARK MODE SUPPORT
+   DASHBOARD PAGE — Professional Black/White/Blue Design
    ================================================================ */
 
-/* Default: Light Mode */
 :root {
-  --dash-bg-body: #f6f8fc;
+  --dash-bg-body: #f8f8fa;
   --dash-bg-card: #ffffff;
   --dash-bg-surface: #ffffff;
-  --dash-bg-surface2: #f1f4f9;
-  --dash-bg-surface3: #e5e9f0;
-  --dash-text: #111827;
-  --dash-text-dim: #4b5563;
-  --dash-text-muted: #9ca3af;
-  --dash-border: #e5e7eb;
-  --dash-border2: #d1d5db;
-  --dash-accent: #7c5cfc;
+  --dash-bg-surface2: #f0f0f5;
+  --dash-bg-surface3: #e8e8ee;
+  --dash-text: #0a0a0f;
+  --dash-text-dim: #4a4a5a;
+  --dash-text-muted: #8888a0;
+  --dash-border: #dcdce5;
+  --dash-border2: #c5c5d0;
+  --dash-accent: #2563eb;
   --dash-danger: #dc2626;
   --dash-safe: #16a34a;
-  --dash-warn: #f59e0b;
-  --dash-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  --dash-warn: #d97706;
+  --dash-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
-/* Dark Mode for Dashboard Page */
 [data-theme="dark"] {
-  --dash-bg-body: #0f1724;
-  --dash-bg-card: #1a2637;
-  --dash-bg-surface: #1a2637;
-  --dash-bg-surface2: #253040;
-  --dash-bg-surface3: #2a3648;
-  --dash-text: #f1f5f9;
-  --dash-text-dim: #cbd5e1;
-  --dash-text-muted: #6b7a8f;
-  --dash-border: #2a3648;
-  --dash-border2: #3a4658;
-  --dash-accent: #7c5cfc;
-  --dash-danger: #f87171;
-  --dash-safe: #4ade80;
-  --dash-warn: #fbbf24;
-  --dash-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+  --dash-bg-body: #0a0a0f;
+  --dash-bg-card: #111118;
+  --dash-bg-surface: #111118;
+  --dash-bg-surface2: #18181f;
+  --dash-bg-surface3: #1f1f28;
+  --dash-text: #f0f0f5;
+  --dash-text-dim: #9898a8;
+  --dash-text-muted: #55556a;
+  --dash-border: #25252e;
+  --dash-border2: #32323e;
+  --dash-accent: #2563eb;
+  --dash-danger: #ef4444;
+  --dash-safe: #22c55e;
+  --dash-warn: #f59e0b;
+  --dash-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
-/* ================================================================
-   DASHBOARD PAGE STYLES
-   ================================================================ */
+/* ============ PAGE ============ */
 .dashboard-page {
   animation: fadeInUp 0.3s ease;
   padding: 20px;
@@ -56,28 +52,28 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
   gap: 16px;
   flex-wrap: wrap;
-  padding: 20px 24px;
+  padding: 18px 22px;
   background: var(--dash-bg-card);
   border-radius: var(--radius);
   border: 1px solid var(--dash-border);
-  box-shadow: var(--dash-shadow);
-  transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+  transition: background 0.3s ease, border-color 0.3s ease;
 }
 
 .dashboard-page .page-title {
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 700;
   color: var(--dash-text);
+  letter-spacing: -0.3px;
   transition: color 0.3s ease;
 }
 
 .dashboard-page .page-sub {
   color: var(--dash-text-dim);
   font-size: 13px;
-  margin-top: 3px;
+  margin-top: 2px;
   font-weight: 400;
   transition: color 0.3s ease;
 }
@@ -90,8 +86,8 @@
 .stats-row {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 14px;
-  margin-bottom: 20px;
+  gap: 12px;
+  margin-bottom: 16px;
 }
 
 @media (max-width: 900px) {
@@ -104,10 +100,9 @@
   background: var(--dash-bg-card);
   border: 1px solid var(--dash-border);
   border-radius: var(--radius);
-  padding: 18px 20px;
-  box-shadow: var(--dash-shadow);
+  padding: 16px 18px;
   border-left: 3px solid var(--dash-border2);
-  transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+  transition: background 0.3s ease, border-color 0.3s ease;
 }
 
 .stat-default {
@@ -129,15 +124,16 @@
   text-transform: uppercase;
   letter-spacing: 0.5px;
   color: var(--dash-text-muted);
-  margin-bottom: 8px;
+  margin-bottom: 6px;
   transition: color 0.3s ease;
 }
 
 .stat-value-d {
-  font-size: 30px;
+  font-size: 28px;
   font-weight: 700;
   color: var(--dash-text);
   line-height: 1;
+  letter-spacing: -0.5px;
   transition: color 0.3s ease;
 }
 
@@ -154,7 +150,7 @@
 .stat-sub-d {
   font-size: 11px;
   color: var(--dash-text-muted);
-  margin-top: 6px;
+  margin-top: 5px;
   transition: color 0.3s ease;
 }
 
@@ -162,7 +158,7 @@
 .charts-row {
   display: grid;
   grid-template-columns: 1fr 1fr 2fr;
-  gap: 14px;
+  gap: 12px;
 }
 
 @media (max-width: 1100px) {
@@ -185,8 +181,7 @@
   background: var(--dash-bg-card);
   border: 1px solid var(--dash-border);
   border-radius: var(--radius);
-  box-shadow: var(--dash-shadow);
-  transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+  transition: background 0.3s ease, border-color 0.3s ease;
 }
 
 .chart-title {
@@ -219,9 +214,9 @@
 }
 
 .big-spinner-dash {
-  width: 36px;
-  height: 36px;
-  border: 3px solid var(--dash-border);
+  width: 32px;
+  height: 32px;
+  border: 2px solid var(--dash-border);
   border-top-color: var(--dash-accent);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
@@ -245,8 +240,8 @@
 }
 
 .pie-legend-dot {
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   display: inline-block;
   flex-shrink: 0;
@@ -260,7 +255,7 @@
 @keyframes fadeInUp {
   from {
     opacity: 0;
-    transform: translateY(12px);
+    transform: translateY(10px);
   }
   to {
     opacity: 1;
@@ -312,30 +307,31 @@
     font-size: 20px;
   }
 }
-/* ── ANALYSIS REPORT ────────────────────────────────────────────────────────── */
+
+/* ── ANALYSIS REPORT ── */
 .analysis-report {
-  margin-top: 24px;
+  margin-top: 20px;
   background: var(--dash-bg-card);
   border: 1px solid var(--dash-border);
   border-radius: var(--radius);
-  padding: 24px;
-  box-shadow: var(--dash-shadow);
-  transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+  padding: 22px;
+  transition: background 0.3s ease, border-color 0.3s ease;
 }
 
 .report-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 20px;
+  margin-bottom: 18px;
   flex-wrap: wrap;
   gap: 12px;
 }
 
 .report-title {
-  font-size: 20px;
+  font-size: 18px;
   font-weight: 700;
   color: var(--dash-text);
+  letter-spacing: -0.3px;
   transition: color 0.3s ease;
 }
 
@@ -371,8 +367,8 @@
 .report-summary-grid {
   display: grid;
   grid-template-columns: repeat(6, 1fr);
-  gap: 12px;
-  margin-bottom: 20px;
+  gap: 10px;
+  margin-bottom: 18px;
 }
 
 @media (max-width: 1100px) {
@@ -390,8 +386,8 @@
 .report-summary-card {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 14px 16px;
+  gap: 10px;
+  padding: 12px 14px;
   background: var(--dash-bg-surface2);
   border-radius: var(--radius-sm);
   border: 1px solid var(--dash-border);
@@ -399,20 +395,30 @@
 }
 
 .report-summary-icon {
-  font-size: 24px;
+  font-size: 20px;
   flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(37, 99, 235, 0.08);
+  border-radius: 6px;
+  color: var(--dash-accent);
+  font-weight: 700;
 }
 
 .report-summary-value {
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 700;
   color: var(--dash-text);
   line-height: 1.2;
+  letter-spacing: -0.3px;
   transition: color 0.3s ease;
 }
 
 .report-summary-label {
-  font-size: 11px;
+  font-size: 10px;
   color: var(--dash-text-muted);
   text-transform: uppercase;
   letter-spacing: 0.3px;
@@ -425,12 +431,12 @@
   background: var(--dash-bg-surface2);
   border: 1px solid var(--dash-border);
   border-radius: var(--radius-sm);
-  margin-bottom: 16px;
+  margin-bottom: 12px;
   transition: background 0.3s ease, border-color 0.3s ease;
 }
 
 .report-chart-title {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--dash-text-dim);
   margin-bottom: 12px;
@@ -443,7 +449,7 @@
   background: var(--dash-bg-surface2);
   border: 1px solid var(--dash-border);
   border-radius: var(--radius-sm);
-  margin-bottom: 16px;
+  margin-bottom: 12px;
   max-height: 400px;
   overflow-y: auto;
   transition: background 0.3s ease, border-color 0.3s ease;
@@ -477,7 +483,7 @@
   background: var(--dash-bg-card);
   border-radius: var(--radius-sm);
   border: 1px solid var(--dash-border);
-  transition: background 0.3s ease, border-color 0.3s ease;
+  transition: background 0.15s ease, border-color 0.3s ease;
 }
 
 .timeline-item:hover {
@@ -485,8 +491,8 @@
 }
 
 .timeline-dot {
-  width: 10px;
-  height: 10px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
   flex-shrink: 0;
   margin-top: 4px;
@@ -494,12 +500,10 @@
 
 .timeline-dot-scam {
   background: var(--dash-danger);
-  box-shadow: 0 0 8px rgba(220, 38, 38, 0.3);
 }
 
 .timeline-dot-legit {
   background: var(--dash-safe);
-  box-shadow: 0 0 8px rgba(22, 163, 74, 0.3);
 }
 
 .timeline-content {
@@ -537,7 +541,7 @@
   color: var(--dash-text-muted);
   background: var(--dash-bg-surface3);
   padding: 1px 8px;
-  border-radius: 10px;
+  border-radius: 3px;
 }
 
 .timeline-time {
@@ -551,7 +555,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding-top: 16px;
+  padding-top: 14px;
   border-top: 1px solid var(--dash-border);
   flex-wrap: wrap;
   gap: 8px;
@@ -575,7 +579,7 @@
   }
 
   .report-title {
-    font-size: 18px;
+    font-size: 16px;
   }
 
   .report-controls {
@@ -611,7 +615,9 @@
   }
 
   .report-summary-icon {
-    font-size: 18px;
+    font-size: 16px;
+    width: 30px;
+    height: 30px;
   }
 
   .report-summary-value {
@@ -619,7 +625,7 @@
   }
 
   .report-summary-label {
-    font-size: 10px;
+    font-size: 9px;
   }
 
   .timeline-header {

@@ -1,37 +1,37 @@
 /* ================================================================
-   APP.CSS — Light/Dark Mode Support
+   APP.CSS — Professional Black/White/Blue Navbar
    ================================================================ */
 
 /* ============ LIGHT MODE (default) ============ */
 :root {
   --nav-bg: #ffffff;
-  --nav-border: #e5e7eb;
-  --nav-text: #111827;
-  --nav-text-dim: #6b7280;
-  --nav-text-hover: #7c5cfc;
-  --nav-active-bg: #f3f4f6;
-  --nav-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  --nav-border: #e5e5ee;
+  --nav-text: #0a0a0f;
+  --nav-text-dim: #6a6a7a;
+  --nav-text-hover: #2563eb;
+  --nav-active-bg: #f0f0f5;
+  --nav-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
   --nav-status-online: #22c55e;
   --nav-status-offline: #ef4444;
-  --nav-status-bg: #f3f4f6;
-  --body-bg: #f6f8fc;
-  --main-bg: #f6f8fc;
+  --nav-status-bg: #f0f0f5;
+  --body-bg: #f8f8fa;
+  --main-bg: #f8f8fa;
 }
 
 /* ============ DARK MODE ============ */
 [data-theme="dark"] {
-  --nav-bg: #1a1a2e;
-  --nav-border: #2a2a4a;
-  --nav-text: #e4e4e7;
-  --nav-text-dim: #a0a0b8;
-  --nav-text-hover: #7c5cfc;
-  --nav-active-bg: #2a2a4a;
-  --nav-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
-  --nav-status-online: #4ade80;
-  --nav-status-offline: #f87171;
-  --nav-status-bg: #2a2a4a;
-  --body-bg: #0f1724;
-  --main-bg: #0f1724;
+  --nav-bg: #111118;
+  --nav-border: #25252e;
+  --nav-text: #f0f0f5;
+  --nav-text-dim: #8888a0;
+  --nav-text-hover: #2563eb;
+  --nav-active-bg: #18181f;
+  --nav-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+  --nav-status-online: #22c55e;
+  --nav-status-offline: #ef4444;
+  --nav-status-bg: #18181f;
+  --body-bg: #0a0a0f;
+  --main-bg: #0a0a0f;
 }
 
 /* ============ NAVBAR ============ */
@@ -39,42 +39,50 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.75rem 2rem;
+  padding: 0 2rem;
+  height: 56px;
   background: var(--nav-bg);
   border-bottom: 1px solid var(--nav-border);
-  box-shadow: var(--nav-shadow);
   position: sticky;
   top: 0;
   z-index: 1000;
-  transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+  transition: background 0.3s ease, border-color 0.3s ease;
   gap: 1rem;
-  flex-wrap: wrap;
 }
 
 /* ============ NAVBAR BRAND ============ */
 .navbar-brand {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 0.6rem;
   flex-shrink: 0;
 }
 
 .brand-icon {
-  font-size: 2rem;
-  line-height: 1;
+  width: 28px;
+  height: 28px;
+  background: var(--nav-text-hover);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 700;
 }
 
 .brand-name {
-  font-size: 1.25rem;
+  font-size: 1.05rem;
   font-weight: 700;
   color: var(--nav-text);
+  letter-spacing: -0.3px;
   transition: color 0.3s ease;
 }
 
 .brand-sub {
-  font-size: 0.7rem;
+  font-size: 0.65rem;
   color: var(--nav-text-dim);
-  letter-spacing: 0.3px;
+  letter-spacing: 0.2px;
   transition: color 0.3s ease;
 }
 
@@ -82,19 +90,19 @@
 .navbar-links {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  flex-wrap: wrap;
+  gap: 0.25rem;
 }
 
 .nav-link {
-  padding: 0.5rem 1rem;
-  border-radius: 8px;
+  padding: 0.4rem 0.85rem;
+  border-radius: var(--radius-sm, 6px);
   text-decoration: none;
   color: var(--nav-text-dim);
-  font-size: 0.875rem;
+  font-size: 0.82rem;
   font-weight: 500;
-  transition: all 0.2s ease;
+  transition: color 0.2s ease, background 0.2s ease;
   position: relative;
+  letter-spacing: -0.1px;
 }
 
 .nav-link:hover {
@@ -110,20 +118,20 @@
 .nav-link.active::after {
   content: '';
   position: absolute;
-  bottom: 4px;
+  bottom: 2px;
   left: 50%;
   transform: translateX(-50%);
-  width: 20px;
+  width: 16px;
   height: 2px;
   background: var(--nav-text-hover);
-  border-radius: 2px;
+  border-radius: 1px;
 }
 
 /* ============ NAVBAR RIGHT ============ */
 .navbar-right {
   display: flex;
   align-items: center;
-  gap: 1rem;
+  gap: 0.75rem;
   flex-shrink: 0;
 }
 
@@ -131,39 +139,41 @@
 .theme-toggle {
   background: var(--nav-active-bg);
   border: 1px solid var(--nav-border);
-  border-radius: 50%;
-  width: 38px;
-  height: 38px;
-  font-size: 1.1rem;
+  border-radius: 6px;
+  width: 34px;
+  height: 34px;
+  font-size: 0.9rem;
   cursor: pointer;
   transition: all 0.2s ease;
   display: flex;
   align-items: center;
   justify-content: center;
+  color: var(--nav-text-dim);
 }
 
 .theme-toggle:hover {
-  transform: scale(1.05);
   border-color: var(--nav-text-hover);
+  color: var(--nav-text-hover);
 }
 
 /* Status Indicator */
 .navbar-status {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  font-size: 0.75rem;
+  gap: 0.4rem;
+  font-size: 0.72rem;
   color: var(--nav-text-dim);
-  background: var(--nav-active-bg);
-  padding: 0.35rem 0.75rem;
-  border-radius: 20px;
+  background: var(--nav-status-bg);
+  padding: 0.3rem 0.65rem;
+  border-radius: 4px;
   border: 1px solid var(--nav-border);
-  transition: all 0.3s ease;
+  transition: all 0.2s ease;
+  font-weight: 500;
 }
 
 .status-dot {
-  width: 8px;
-  height: 8px;
+  width: 6px;
+  height: 6px;
   border-radius: 50%;
   display: inline-block;
   flex-shrink: 0;
@@ -171,23 +181,21 @@
 
 .status-dot.online {
   background: var(--nav-status-online);
-  box-shadow: 0 0 8px rgba(34, 197, 94, 0.3);
 }
 
 .status-dot.offline {
   background: var(--nav-status-offline);
-  box-shadow: 0 0 8px rgba(239, 68, 68, 0.3);
 }
 
 .navbar-status.offline {
-  border-color: var(--nav-status-offline);
+  border-color: rgba(239, 68, 68, 0.3);
   color: var(--nav-status-offline);
 }
 
 /* ============ MAIN CONTENT ============ */
 .app-main {
   padding: 24px;
-  min-height: calc(100vh - 70px);
+  min-height: calc(100vh - 56px);
   background: var(--main-bg);
   transition: background 0.3s ease;
 }
@@ -202,6 +210,7 @@
 @media (max-width: 768px) {
   .navbar {
     padding: 0.75rem 1rem;
+    height: auto;
     flex-direction: column;
     align-items: stretch;
     gap: 0.5rem;
@@ -226,20 +235,20 @@
 
 @media (max-width: 480px) {
   .navbar-links {
-    gap: 0.25rem;
+    gap: 0.15rem;
   }
 
   .nav-link {
-    padding: 0.4rem 0.6rem;
+    padding: 0.35rem 0.5rem;
     font-size: 0.75rem;
   }
 
   .brand-name {
-    font-size: 1rem;
+    font-size: 0.9rem;
   }
 
   .brand-sub {
-    font-size: 0.6rem;
+    font-size: 0.58rem;
   }
 
   .navbar-status {
@@ -248,9 +257,9 @@
   }
 
   .theme-toggle {
-    width: 32px;
-    height: 32px;
-    font-size: 0.9rem;
+    width: 30px;
+    height: 30px;
+    font-size: 0.8rem;
   }
 
   .app-main {

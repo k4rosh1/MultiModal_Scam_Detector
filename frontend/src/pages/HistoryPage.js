@@ -4,10 +4,10 @@ import './HistoryPage.css';
 
 const FILTERS = [
   { key: 'all',      label: 'All' },
-  { key: 'scam',     label: ' Scam' },
-  { key: 'legit',    label: ' Legit' },
-  { key: 'facebook', label: ' Facebook' },
-  { key: 'twitter',  label: ' X (Twitter)' },
+  { key: 'scam',     label: 'Scam' },
+  { key: 'legit',    label: 'Legit' },
+  { key: 'facebook', label: 'Facebook' },
+  { key: 'twitter',  label: 'X (Twitter)' },
 ];
 
 // Helper to get extension history
@@ -127,7 +127,7 @@ export default function HistoryPage() {
         <div className="table-error card"> {error}</div>
       ) : filtered.length === 0 ? (
         <div className="table-empty card">
-          <div style={{ fontSize: 40, marginBottom: 12 }}>📭</div>
+          <div style={{ fontSize: 14, marginBottom: 12, color: 'var(--history-text-muted)' }}>No results</div>
           <p>No detections found.</p>
           <p style={{ fontSize: 12, color: 'var(--text-muted)', marginTop: 6 }}>
             Use the Detect page for manual scans, or the extension on Facebook/Twitter.
@@ -151,8 +151,8 @@ export default function HistoryPage() {
                 return (
                   <tr key={r.id} className={isScam ? 'row-scam' : 'row-legit'}>
                     <td className="mono-cell">#{r.id}</td>
-                    <td><span className={`tag ${isScam ? 'tag-scam' : 'tag-legit'}`}>{isScam ? ' Scam' : ' Legit'}</span></td>
-                    <td><span className="plat-cell">{r.platform === 'facebook' ? ' FB' : r.platform === 'twitter' ? ' X' : ' ?'}</span></td>
+                    <td><span className={`tag ${isScam ? 'tag-scam' : 'tag-legit'}`}>{isScam ? 'Scam' : 'Legit'}</span></td>
+                    <td><span className="plat-cell">{r.platform === 'facebook' ? 'FB' : r.platform === 'twitter' ? 'X' : '?'}</span></td>
                     <td className="text-cell" title={r.text || ''}>{(r.text || '').substring(0, 70)}{r.text?.length > 70 ? '…' : ''}</td>
                     <td>
                       <div className="mini-bar-wrap">
@@ -162,7 +162,7 @@ export default function HistoryPage() {
                     </td>
                     <td className="mono-cell" style={{ color: 'var(--danger)' }}>{r.scam_prob  ? parseFloat(r.scam_prob).toFixed(1)  + '%' : '—'}</td>
                     <td className="mono-cell" style={{ color: 'var(--safe)'   }}>{r.legit_prob ? parseFloat(r.legit_prob).toFixed(1) + '%' : '—'}</td>
-                    <td className="mono-cell">{r.is_mock ? '🟡' : '✅'}</td>
+                    <td className="mono-cell">{r.is_mock ? 'Mock' : 'Real'}</td>
                     <td className="ts-cell">{ts}</td>
                   </tr>
                 );

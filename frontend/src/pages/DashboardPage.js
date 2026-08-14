@@ -124,8 +124,8 @@ export default function DashboardPage() {
 
   const platData = stats
     ? [
-        { name: "Facebook", value: stats.facebook_total, fill: "#7c5cfc" },
-        { name: "X (Twitter)", value: stats.twitter_total, fill: "#a78bfa" },
+        { name: "Facebook", value: stats.facebook_total, fill: "#2563eb" },
+        { name: "X (Twitter)", value: stats.twitter_total, fill: "#60a5fa" },
       ]
     : [];
 
@@ -288,14 +288,15 @@ export default function DashboardPage() {
     document.documentElement.getAttribute("data-theme") !== "light";
   const tooltipStyle = {
     contentStyle: {
-      background: isDark ? "#16162a" : "#ffffff",
-      border: `1px solid ${isDark ? "#2a2a4a" : "#d0d0e8"}`,
-      borderRadius: 8,
+      background: isDark ? "#111118" : "#ffffff",
+      border: `1px solid ${isDark ? "#25252e" : "#dcdce5"}`,
+      borderRadius: 6,
+      fontSize: 12,
     },
-    labelStyle: { color: isDark ? "#e0e0f0" : "#1a1a2e" },
+    labelStyle: { color: isDark ? "#f0f0f5" : "#0a0a0f" },
   };
-  const tickColor = isDark ? "#9090b8" : "#4a4a6a";
-  const textColor = isDark ? "#e0e0f0" : "#1a1a2e";
+  const tickColor = isDark ? "#9898a8" : "#4a4a5a";
+  const textColor = isDark ? "#f0f0f5" : "#0a0a0f";
 
   const statCards = [
     {
@@ -328,17 +329,17 @@ export default function DashboardPage() {
     <div className="dashboard-page">
       <div className="page-header">
         <div>
-          <h1 className="page-title">📊 Dashboard</h1>
+          <h1 className="page-title">Dashboard</h1>
           <p className="page-sub">
             Live overview · auto-refreshes every 15s (pauses when tab is
             inactive)
             {stats?.mock_mode && (
-              <span className="mock-tag"> · 🟡 Mock Mode</span>
+              <span className="mock-tag"> · Mock Mode</span>
             )}
           </p>
         </div>
         <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-          <button className="btn btn-ghost" onClick={load}>
+          <button className="btn btn-ghost" onClick={load} style={{ cursor: 'pointer' }}>
             ↻ Refresh
           </button>
           <button className="btn btn-danger" onClick={handleClear}>
@@ -379,7 +380,7 @@ export default function DashboardPage() {
                     dataKey="value"
                   >
                     {pieData.map((_, i) => (
-                      <Cell key={i} fill={["#22c55e", "#f05252"][i]} />
+                      <Cell key={i} fill={["#22c55e", "#ef4444"][i]} />
                     ))}
                   </Pie>
                   <Tooltip
@@ -456,7 +457,7 @@ export default function DashboardPage() {
                 <Tooltip {...tooltipStyle} cursor={false} />
                 <Bar
                   dataKey="scam"
-                  fill="#f05252"
+                  fill="#ef4444"
                   radius={[4, 4, 0, 0]}
                   name="Scam"
                 />
@@ -475,7 +476,7 @@ export default function DashboardPage() {
       {/* ── ANALYSIS REPORT SECTION ── */}
       <div className="analysis-report">
         <div className="report-header">
-          <h2 className="report-title">📋 Analysis Report</h2>
+          <h2 className="report-title">Analysis Report</h2>
           <div className="report-controls">
             <span className="report-period-label">Period:</span>
             <select
@@ -494,23 +495,23 @@ export default function DashboardPage() {
         {/* ── SUMMARY STATS CARDS ── */}
         <div className="report-summary-grid">
           <div className="report-summary-card">
-            <span className="report-summary-icon">📊</span>
+            <span className="report-summary-icon">#</span>
             <div>
               <div className="report-summary-value">{summaryStats.total}</div>
               <div className="report-summary-label">Total Detections</div>
             </div>
           </div>
           <div className="report-summary-card">
-            <span className="report-summary-icon">🚨</span>
+            <span className="report-summary-icon">!</span>
             <div>
-              <div className="report-summary-value" style={{ color: "#f05252" }}>
+              <div className="report-summary-value" style={{ color: "#ef4444" }}>
                 {summaryStats.scams}
               </div>
               <div className="report-summary-label">Scams Detected</div>
             </div>
           </div>
           <div className="report-summary-card">
-            <span className="report-summary-icon">✅</span>
+            <span className="report-summary-icon">✓</span>
             <div>
               <div className="report-summary-value" style={{ color: "#22c55e" }}>
                 {summaryStats.legit}
@@ -519,7 +520,7 @@ export default function DashboardPage() {
             </div>
           </div>
           <div className="report-summary-card">
-            <span className="report-summary-icon">📈</span>
+            <span className="report-summary-icon">%</span>
             <div>
               <div className="report-summary-value" style={{ color: "#f59e0b" }}>
                 {summaryStats.scamRate}%
@@ -528,7 +529,7 @@ export default function DashboardPage() {
             </div>
           </div>
           <div className="report-summary-card">
-            <span className="report-summary-icon">🕐</span>
+            <span className="report-summary-icon">T</span>
             <div>
               <div className="report-summary-value" style={{ color: "#06b6d4" }}>
                 {summaryStats.peakHourLabel}
@@ -541,7 +542,7 @@ export default function DashboardPage() {
         {/* ── TREND CHART ── */}
         <div className="report-chart-card">
           <div className="report-chart-title">
-            📈 Detection Trend ({getPeriodDisplayName()})
+            Detection Trend ({getPeriodDisplayName()})
           </div>
           {dailyTrendData.every((d) => d.total === 0) ? (
             <div className="chart-empty">No data available</div>
@@ -550,7 +551,7 @@ export default function DashboardPage() {
               <AreaChart data={dailyTrendData}>
                 <CartesianGrid
                   strokeDasharray="3 3"
-                  stroke={isDark ? "#2a2a4a" : "#e5e7eb"}
+                  stroke={isDark ? "#25252e" : "#dcdce5"}
                 />
                 <XAxis
                   dataKey="date"
@@ -572,8 +573,8 @@ export default function DashboardPage() {
                   type="monotone"
                   dataKey="scam"
                   stackId="1"
-                  stroke="#f05252"
-                  fill="#f05252"
+                  stroke="#ef4444"
+                  fill="#ef4444"
                   fillOpacity={0.6}
                   name="Scam"
                 />
@@ -594,7 +595,7 @@ export default function DashboardPage() {
         {/* ── RISK DISTRIBUTION ── */}
         <div className="report-chart-card">
           <div className="report-chart-title">
-            🎯 Risk Score Distribution
+            Risk Score Distribution
           </div>
           {riskDistribution.every((d) => d.count === 0) ? (
             <div className="chart-empty">No data available</div>
@@ -615,7 +616,7 @@ export default function DashboardPage() {
                 <Tooltip {...tooltipStyle} />
                 <Bar
                   dataKey="count"
-                  fill="#7c5cfc"
+                  fill="#2563eb"
                   radius={[4, 4, 0, 0]}
                   name="Detections"
                 />
@@ -627,7 +628,7 @@ export default function DashboardPage() {
         {/* ── REPORT FOOTER ── */}
         <div className="report-footer">
           <div className="report-footer-text">
-            📋 Report generated on {new Date().toLocaleString()}
+            Report generated on {new Date().toLocaleString()}
           </div>
           <div className="report-footer-text">
             • Total detections: {summaryStats.total}

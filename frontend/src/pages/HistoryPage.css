@@ -1,48 +1,44 @@
 /* ================================================================
-   HISTORY PAGE — LIGHT/DARK MODE SUPPORT
+   HISTORY PAGE — Professional Black/White/Blue Design
    ================================================================ */
 
-/* Default: Light Mode */
 :root {
-  --history-bg-body: #f6f8fc;
+  --history-bg-body: #f8f8fa;
   --history-bg-card: #ffffff;
   --history-bg-surface: #ffffff;
-  --history-bg-surface2: #f1f4f9;
-  --history-bg-surface3: #e5e9f0;
-  --history-text: #111827;
-  --history-text-dim: #4b5563;
-  --history-text-muted: #9ca3af;
-  --history-border: #e5e7eb;
-  --history-border2: #d1d5db;
-  --history-accent: #7c5cfc;
+  --history-bg-surface2: #f0f0f5;
+  --history-bg-surface3: #e8e8ee;
+  --history-text: #0a0a0f;
+  --history-text-dim: #4a4a5a;
+  --history-text-muted: #8888a0;
+  --history-border: #dcdce5;
+  --history-border2: #c5c5d0;
+  --history-accent: #2563eb;
   --history-danger: #dc2626;
   --history-safe: #16a34a;
-  --history-warn: #f59e0b;
-  --history-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  --history-warn: #d97706;
+  --history-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 
-/* Dark Mode for History Page */
 [data-theme="dark"] {
-  --history-bg-body: #0f1724;
-  --history-bg-card: #1a2637;
-  --history-bg-surface: #1a2637;
-  --history-bg-surface2: #253040;
-  --history-bg-surface3: #2a3648;
-  --history-text: #f1f5f9;
-  --history-text-dim: #cbd5e1;
-  --history-text-muted: #6b7a8f;
-  --history-border: #2a3648;
-  --history-border2: #3a4658;
-  --history-accent: #7c5cfc;
-  --history-danger: #f87171;
-  --history-safe: #4ade80;
-  --history-warn: #fbbf24;
-  --history-shadow: 0 2px 12px rgba(0, 0, 0, 0.3);
+  --history-bg-body: #0a0a0f;
+  --history-bg-card: #111118;
+  --history-bg-surface: #111118;
+  --history-bg-surface2: #18181f;
+  --history-bg-surface3: #1f1f28;
+  --history-text: #f0f0f5;
+  --history-text-dim: #9898a8;
+  --history-text-muted: #55556a;
+  --history-border: #25252e;
+  --history-border2: #32323e;
+  --history-accent: #2563eb;
+  --history-danger: #ef4444;
+  --history-safe: #22c55e;
+  --history-warn: #f59e0b;
+  --history-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 
-/* ================================================================
-   HISTORY PAGE STYLES
-   ================================================================ */
+/* ============ PAGE ============ */
 .history-page {
   animation: fadeInUp 0.3s ease;
   padding: 20px;
@@ -56,28 +52,28 @@
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  margin-bottom: 20px;
+  margin-bottom: 18px;
   gap: 16px;
   flex-wrap: wrap;
-  padding: 20px 24px;
+  padding: 18px 22px;
   background: var(--history-bg-card);
   border-radius: var(--radius);
   border: 1px solid var(--history-border);
-  box-shadow: var(--history-shadow);
-  transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+  transition: background 0.3s ease, border-color 0.3s ease;
 }
 
 .history-page .page-title {
-  font-size: 22px;
+  font-size: 20px;
   font-weight: 700;
   color: var(--history-text);
+  letter-spacing: -0.3px;
   transition: color 0.3s ease;
 }
 
 .history-page .page-sub {
   color: var(--history-text-dim);
   font-size: 13px;
-  margin-top: 3px;
+  margin-top: 2px;
   font-weight: 400;
   transition: color 0.3s ease;
 }
@@ -87,19 +83,19 @@
   display: flex;
   align-items: center;
   gap: 10px;
-  margin-bottom: 14px;
+  margin-bottom: 12px;
   flex-wrap: wrap;
 }
 
 .filter-tabs {
   display: flex;
-  gap: 6px;
+  gap: 4px;
   flex-wrap: wrap;
 }
 
 .filter-tab {
   padding: 5px 13px;
-  border-radius: 20px;
+  border-radius: 4px;
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
@@ -147,7 +143,7 @@
 .results-count {
   font-size: 12px;
   color: var(--history-text-muted);
-  margin-bottom: 12px;
+  margin-bottom: 10px;
   transition: color 0.3s ease;
 }
 
@@ -163,8 +159,7 @@
   background: var(--history-bg-card);
   border: 1px solid var(--history-border);
   border-radius: var(--radius);
-  box-shadow: var(--history-shadow);
-  transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
+  transition: background 0.3s ease, border-color 0.3s ease;
 }
 
 .det-table {
@@ -174,10 +169,10 @@
 }
 
 .det-table thead th {
-  padding: 11px 14px;
+  padding: 10px 14px;
   text-align: left;
   font-size: 10px;
-  font-weight: 700;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
   color: var(--history-text-muted);
@@ -201,15 +196,15 @@
 }
 
 .row-scam:hover {
-  background: rgba(220, 38, 38, 0.05) !important;
+  background: rgba(220, 38, 38, 0.03) !important;
 }
 
 .row-legit:hover {
-  background: rgba(22, 163, 74, 0.04) !important;
+  background: rgba(22, 163, 74, 0.03) !important;
 }
 
 .det-table td {
-  padding: 10px 14px;
+  padding: 9px 14px;
   vertical-align: middle;
 }
 
@@ -252,9 +247,9 @@
 
 .mini-bar {
   width: 48px;
-  height: 5px;
+  height: 4px;
   background: var(--history-bg-surface3);
-  border-radius: 3px;
+  border-radius: 2px;
   overflow: hidden;
   flex-shrink: 0;
   transition: background 0.3s ease;
@@ -262,7 +257,7 @@
 
 .mini-fill {
   height: 100%;
-  border-radius: 3px;
+  border-radius: 2px;
 }
 
 .fill-scam {
@@ -284,8 +279,8 @@
 }
 
 .big-spinner-h {
-  width: 22px;
-  height: 22px;
+  width: 20px;
+  height: 20px;
   border: 2px solid var(--history-border);
   border-top-color: var(--history-accent);
   border-radius: 50%;
@@ -308,7 +303,7 @@
 @keyframes fadeInUp {
   from {
     opacity: 0;
-    transform: translateY(12px);
+    transform: translateY(10px);
   }
   to {
     opacity: 1;

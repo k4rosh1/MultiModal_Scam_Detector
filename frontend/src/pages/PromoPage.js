@@ -52,7 +52,7 @@ export default function PromoPage() {
       <nav className="promo-nav">
         <div className="nav-left">
           <div className="nav-logo" onClick={() => navigate("/")}>
-            <span className="logo-icon">🛡</span>
+            <span className="logo-icon">P</span>
             <span className="logo-text">Protego</span>
           </div>
         </div>
@@ -70,13 +70,13 @@ export default function PromoPage() {
               className={`promo-theme-btn ${theme === "light" ? "active" : ""}`}
               onClick={() => toggleTheme("light")}
             >
-              <span className="icon">☀️</span> Light
+              Light
             </button>
             <button
               className={`promo-theme-btn ${theme === "dark" ? "active" : ""}`}
               onClick={() => toggleTheme("dark")}
             >
-              <span className="icon">🌙</span> Dark
+              Dark
             </button>
           </div>
           <button className="nav-login-btn" onClick={handleGetStarted}>
@@ -137,7 +137,7 @@ export default function PromoPage() {
         </h2>
         <div className="features-grid">
           <div className="feature-card animate-on-scroll">
-            <div className="feature-icon">🧠</div>
+            <div className="feature-icon">T</div>
             <h3>mBERT Text-Only</h3>
             <p>
               Uses mBERT multilingual model to analyze text content for
@@ -145,7 +145,7 @@ export default function PromoPage() {
             </p>
           </div>
           <div className="feature-card animate-on-scroll">
-            <div className="feature-icon">🌐</div>
+            <div className="feature-icon">L</div>
             <h3>Taglish Support</h3>
             <p>
               Trained on Tagalog, English, and Taglish text for Philippine
@@ -153,7 +153,7 @@ export default function PromoPage() {
             </p>
           </div>
           <div className="feature-card animate-on-scroll">
-            <div className="feature-icon">⚡</div>
+            <div className="feature-icon">R</div>
             <h3>Real-time Analysis</h3>
             <p>
               Get instant results with our optimized API pipeline and
@@ -199,11 +199,11 @@ export default function PromoPage() {
       <section id="extension" className="how-it-works-section">
         <div className="extension-features">
           <h2 className="extension-title animate-on-scroll">
-            🚀 Browser Extension
+            Browser Extension
           </h2>
           <div className="extension-grid">
             <div className="extension-card animate-on-scroll">
-              <span className="extension-icon">🔍</span>
+              <span className="extension-icon">S</span>
               <h4>Auto-Detect</h4>
               <p>Automatically scans posts as you browse Facebook and X.</p>
               <div className="extension-badge">
@@ -212,7 +212,7 @@ export default function PromoPage() {
               </div>
             </div>
             <div className="extension-card animate-on-scroll">
-              <span className="extension-icon">📊</span>
+              <span className="extension-icon">D</span>
               <h4>Dashboard</h4>
               <p>View statistics and trends from all detected scams.</p>
               <div className="extension-badge">
@@ -221,7 +221,7 @@ export default function PromoPage() {
               </div>
             </div>
             <div className="extension-card animate-on-scroll">
-              <span className="extension-icon">🛡</span>
+              <span className="extension-icon">P</span>
               <h4>Real-time Protection</h4>
               <p>Get instant alerts when potential scams are detected.</p>
               <div className="extension-badge">
@@ -230,7 +230,7 @@ export default function PromoPage() {
               </div>
             </div>
             <div className="extension-card animate-on-scroll">
-              <span className="extension-icon">📜</span>
+              <span className="extension-icon">H</span>
               <h4>History</h4>
               <p>Keep track of all detected scams in one place.</p>
               <div className="extension-badge">
@@ -245,7 +245,7 @@ export default function PromoPage() {
       {/* Footer */}
       <footer className="promo-footer animate-on-scroll">
         <p>
-          🛡 Protego — mBERT · Text-Only · Taglish
+          Protego — mBERT · Text-Only · Taglish
         </p>
         <p style={{ marginTop: 8, fontSize: 12, color: "var(--promo-text-muted)" }}>
           Built for Philippine social media scam detection

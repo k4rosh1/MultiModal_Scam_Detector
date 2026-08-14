@@ -11,25 +11,25 @@ function ResultCard({ result }) {
     <div className={`result-card ${isScam ? "result-scam" : "result-legit"}`}>
       {result.is_mock && (
         <div className="mock-banner">
-          🟡 Mock Mode — predictions are simulated
+          Mock Mode — predictions are simulated
         </div>
       )}
       {result.is_duplicate && (
         <div className="duplicate-banner">
-          ⚡ Cached result — this post was scanned before. No duplicate saved to
+          Cached result — this post was scanned before. No duplicate saved to
           database.
         </div>
       )}
       <div className="result-header">
         <div className={`result-icon ${isScam ? "icon-scam" : "icon-legit"}`}>
-          {isScam ? "🚨" : "✅"}
+          {isScam ? "!" : "✓"}
         </div>
         <div>
           <div className="result-verdict">
             {isScam ? "Scam Detected" : "Looks Legitimate"}
           </div>
           <div className="result-platform">
-            {result.platform === "facebook" ? "📘 Facebook" : "🐦 X (Twitter)"}
+            {result.platform === "facebook" ? "Facebook" : "X (Twitter)"}
           </div>
         </div>
         <span className={`tag ${isScam ? "tag-scam" : "tag-legit"}`}>
@@ -134,7 +134,7 @@ export default function DetectPage() {
     <div className="detect-page">
       <div className="page-header">
         <div>
-          <h1 className="page-title">🔍 Scam Detector</h1>
+          <h1 className="page-title">Scam Detector</h1>
           <p className="page-sub">
             Enter a post caption to get a scam verdict — Text-Only mBERT
           </p>
@@ -155,13 +155,13 @@ export default function DetectPage() {
               className={`plat-btn ${platform === "facebook" ? "plat-active" : ""}`}
               onClick={() => setPlatform("facebook")}
             >
-              📘 Facebook
+              Facebook
             </button>
             <button
               className={`plat-btn ${platform === "twitter" ? "plat-active" : ""}`}
               onClick={() => setPlatform("twitter")}
             >
-              🐦 X (Twitter)
+              X (Twitter)
             </button>
           </div>
 
@@ -192,18 +192,18 @@ export default function DetectPage() {
                 className="example-btn scam-ex"
                 onClick={fillScamSample}
               >
-                🚨 Scam sample
+                Scam sample
               </button>
               <button
                 className="example-btn legit-ex"
                 onClick={fillLegitSample}
               >
-                ✅ Legit sample
+                Legit sample
               </button>
             </div>
           </div>
 
-          {error && <div className="error-msg">⚠️ {error}</div>}
+          {error && <div className="error-msg">{error}</div>}
 
           <div className="action-row">
             <button
@@ -216,7 +216,7 @@ export default function DetectPage() {
                   <span className="spinner" /> Analysing...
                 </>
               ) : (
-                <>🔍 Analyse Post</>
+                <>Analyse Post</>
               )}
             </button>
             <button className="reset-btn" onClick={handleReset}>
@@ -229,17 +229,17 @@ export default function DetectPage() {
         <div className="result-panel">
           {!result && !loading && (
             <div className="result-placeholder">
-              <div className="placeholder-icon">🛡️</div>
+              <div className="placeholder-icon">P</div>
               <p className="placeholder-title">Ready to analyse</p>
               <p className="placeholder-sub">
                 Enter a post caption and click <strong>Analyse Post</strong>.
               </p>
               <div className="placeholder-tips">
                 <div className="tip">
-                  🌐 Supports Tagalog, English, and Taglish
+                  Supports Tagalog, English, and Taglish
                 </div>
-                <div className="tip">⚡ Powered by mBERT Text-Only</div>
-                <div className="tip">📝 No metadata required</div>
+                <div className="tip">Powered by mBERT Text-Only</div>
+                <div className="tip">No metadata required</div>
               </div>
             </div>
           )}
@@ -258,12 +258,12 @@ export default function DetectPage() {
             <div style={{ animation: "fadeInUp 0.35s ease" }}>
               <ResultCard result={result} />
               <div className="summary-card" style={{ marginTop: 16 }}>
-                <div className="summary-title">📋 Input Summary</div>
+                <div className="summary-title">Input Summary</div>
                 <div className="summary-grid">
                   <div className="summary-item">
                     <span className="s-label">Platform</span>
                     <span className="s-value">
-                      {platform === "facebook" ? "📘 Facebook" : "🐦 X"}
+                      {platform === "facebook" ? "Facebook" : "X (Twitter)"}
                     </span>
                   </div>
                   <div className="summary-item">
