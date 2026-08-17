@@ -12,7 +12,7 @@ database.init_db()
 
 # 2. Setup FastAPI App
 app = FastAPI(
-    title="ScamShield API",
+    title="Protego API",
     description="Taglish scam detection — mBERT + Early Fusion (770-dim)",
     version="3.0.0"
 )

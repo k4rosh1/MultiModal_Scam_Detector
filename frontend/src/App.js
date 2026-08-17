@@ -1,8 +1,15 @@
 import React, { useEffect, useState, useRef } from "react";
-import { BrowserRouter, Routes, Route, NavLink } from "react-router-dom";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  NavLink,
+  useLocation,
+} from "react-router-dom";
 import DetectPage from "./pages/DetectPage";
 import DashboardPage from "./pages/DashboardPage";
 import HistoryPage from "./pages/HistoryPage";
+import PromoPage from "./pages/PromoPage";
 import { checkHealth } from "./api";
 import "./App.css";
 
@@ -40,20 +47,19 @@ function Navbar({ theme, toggleTheme }) {
   return (
     <nav className="navbar">
       <div className="navbar-brand">
-        <div className="brand-icon">🛡</div>
+        <div className="brand-icon">P</div>
         <div>
-          <div className="brand-name">ScamShield</div>
+          <div className="brand-name">Protego</div>
           <div className="brand-sub">mBERT · Early Fusion · Taglish</div>
         </div>
       </div>
 
       <div className="navbar-links">
         <NavLink
-          to="/"
+          to="/detect"
           className={({ isActive }) =>
             isActive ? "nav-link active" : "nav-link"
           }
-          end
         >
           Detect
         </NavLink>
@@ -100,28 +106,41 @@ function Navbar({ theme, toggleTheme }) {
   );
 }
 
+function AppContent({ theme, toggleTheme }) {
+  const location = useLocation();
+  // Hide navbar on Home (promo/landing) page only - other pages show the navbar
+  const hideNavbar = location.pathname === "/";
+
+  return (
+    <>
+      {!hideNavbar && <Navbar theme={theme} toggleTheme={toggleTheme} />}
+      <main className={location.pathname === "/" ? "promo-main" : "app-main"}>
+        <Routes>
+          <Route path="/" element={<PromoPage />} />
+          <Route path="/detect" element={<DetectPage />} />
+          <Route path="/dashboard" element={<DashboardPage />} />
+          <Route path="/history" element={<HistoryPage />} />
+        </Routes>
+      </main>
+    </>
+  );
+}
+
 export default function App() {
   const [theme, setTheme] = useState(() => {
-    return localStorage.getItem("scamshield-theme") || "dark";
+    return localStorage.getItem("protego-theme") || "dark";
   });
 
   useEffect(() => {
     document.documentElement.setAttribute("data-theme", theme);
-    localStorage.setItem("scamshield-theme", theme);
+    localStorage.setItem("protego-theme", theme);
   }, [theme]);
 
   const toggleTheme = () => setTheme((t) => (t === "dark" ? "light" : "dark"));
 
   return (
     <BrowserRouter>
-      <Navbar theme={theme} toggleTheme={toggleTheme} />
-      <main className="app-main">
-        <Routes>
-          <Route path="/" element={<DetectPage />} />
-          <Route path="/dashboard" element={<DashboardPage />} />
-          <Route path="/history" element={<HistoryPage />} />
-        </Routes>
-      </main>
+      <AppContent theme={theme} toggleTheme={toggleTheme} />
     </BrowserRouter>
   );
 }

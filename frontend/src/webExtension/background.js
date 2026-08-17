@@ -64,7 +64,7 @@ async function clearHistory() {
 }
 
 chrome.runtime.onInstalled.addListener(async () => {
-  console.log("ScamShield Extension Installed");
+  console.log("Protego Extension Installed");
 
   const settings = await chrome.storage.local.get(DEFAULT_SETTINGS);
   if (
@@ -263,4 +263,4 @@ async function updateSettings(newSettings) {
   }
 }
 
-console.log("ScamShield background service worker started");
+console.log("Protego background service worker started");

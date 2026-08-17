@@ -82,6 +82,11 @@
 
 .app-main { max-width: 1200px; margin: 0 auto; padding: 30px 28px; }
 
+.promo-main {
+  min-height: 100vh;
+  transition: background 0.3s ease;
+}
+
 @media (max-width: 768px) {
   .navbar { padding: 0 16px; gap: 12px; }
   .brand-sub { display: none; }

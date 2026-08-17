@@ -1,5 +1,5 @@
 console.log("========================================");
-console.log("🔵 ScamShield Content Script LOADED!");
+console.log("🔵 Protego Content Script LOADED!");
 console.log("📍 URL:", window.location.href);
 console.log("========================================");
 
@@ -394,9 +394,9 @@ function highlightPost(element, result, text) {
   element.style.outline = "2px solid #f05252";
   element.style.backgroundColor = "rgba(240, 82, 82, 0.05)";
 
-  if (!element.querySelector(".scamshield-badge")) {
+  if (!element.querySelector(".protego-badge")) {
     const badge = document.createElement("span");
-    badge.className = "scamshield-badge";
+    badge.className = "protego-badge";
     badge.textContent = "⚠️ SCAM";
     badge.style.cssText = `
       display: inline-block;
@@ -417,7 +417,7 @@ function highlightPost(element, result, text) {
 }
 
 function clearHighlights() {
-  document.querySelectorAll(".scamshield-badge").forEach((b) => b.remove());
+  document.querySelectorAll(".protego-badge").forEach((b) => b.remove());
   document.querySelectorAll('[style*="outline"]').forEach((el) => {
     el.style.outline = "";
     el.style.backgroundColor = "";

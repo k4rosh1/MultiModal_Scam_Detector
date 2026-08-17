@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
-  "name": "ScamShield Detector",
+  "name": "Protego",
   "version": "1.0.0",
-  "description": "AI-powered scam detection",
+  "description": "AI-powered multimodal scam detection for social media",
   "permissions": [
     "activeTab",
     "storage",
@@ -17,7 +17,7 @@
   ],
   "action": {
     "default_popup": "popup.html",
-    "default_title": "ScamShield"
+    "default_title": "Protego"
   },
   "background": {
     "service_worker": "background.js"
@@ -29,7 +29,9 @@
         "https://*.twitter.com/*",
         "https://*.x.com/*"
       ],
-      "js": ["content.js"],
+      "js": [
+        "content.js"
+      ],
       "run_at": "document_idle"
     }
   ]
