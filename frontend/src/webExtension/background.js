@@ -1,3 +1,6 @@
+// ⚠️ BEFORE PUBLISHING: replace with your deployed backend URL, e.g.
+// "https://your-app-name.onrender.com" — do NOT leave this as localhost
+// once the extension is used on any machine other than yours.
 const API_URL = "http://localhost:8000";
 
 const DEFAULT_SETTINGS = {
@@ -128,7 +131,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       request.type || "post",
       request.account_age,
       request.posting_frequency,
-      request.manual === true,
     )
       .then((result) => sendResponse(result))
       .catch((error) =>
@@ -162,9 +164,8 @@ async function detectScam(
   type = "post",
   accountAge,
   postingFrequency,
-  manual = false,
 ) {
-  if (!manual && !autoDetectEnabled) {
+  if (!autoDetectEnabled && type !== "manual") {
     return { verdict: "SKIPPED", confidence: 0 };
   }
 

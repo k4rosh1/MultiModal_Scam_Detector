@@ -27,6 +27,9 @@ const resultScamProb = document.getElementById("resultScamProb");
 const resultLegitProb = document.getElementById("resultLegitProb");
 const confidenceBar = document.getElementById("confidenceBar");
 
+// ⚠️ BEFORE PUBLISHING: replace with your deployed frontend URL, e.g.
+// "https://your-frontend.onrender.com" — used for the "View Dashboard" /
+// "View History" buttons in the popup.
 const REACT_APP_URL = "http://localhost:3000";
 const DASHBOARD_URL = `${REACT_APP_URL}/dashboard`;
 const HISTORY_URL = `${REACT_APP_URL}/history`;
@@ -362,7 +365,10 @@ async function scanCurrentProfile() {
       url.includes("x.com");
 
     if (!isSocialMedia) {
-      showProfileStatus("This feature only works on Twitter", "error");
+      showProfileStatus(
+        "This feature only works on Facebook or Twitter",
+        "error",
+      );
       scanProfileBtn.innerHTML = originalText;
       scanProfileBtn.disabled = false;
       return;

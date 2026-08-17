@@ -11,6 +11,7 @@
   ],
   "host_permissions": [
     "http://localhost:8000/*",
+    "https://YOUR-BACKEND-URL.onrender.com/*",
     "https://*.facebook.com/*",
     "https://*.twitter.com/*",
     "https://*.x.com/*"
