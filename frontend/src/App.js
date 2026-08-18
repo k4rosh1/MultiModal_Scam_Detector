@@ -46,13 +46,13 @@ function Navbar({ theme, toggleTheme }) {
 
   return (
     <nav className="navbar">
-      <div className="navbar-brand">
+      <NavLink to="/" className="navbar-brand" title="Back to home">
         <div className="brand-icon">P</div>
         <div>
           <div className="brand-name">Protego</div>
           <div className="brand-sub">mBERT · Early Fusion · Taglish</div>
         </div>
-      </div>
+      </NavLink>
 
       <div className="navbar-links">
         <NavLink

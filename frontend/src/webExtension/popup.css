@@ -5,8 +5,8 @@
   --surface3:   #252540;
   --border:     #2a2a4a;
   --border2:    #383860;
-  --accent:     #7c5cfc;
-  --accent2:    #6344e0;
+  --accent:     #2563eb;
+  --accent2:    #1d4ed8;
   --danger:     #f05252;
   --danger-dim: #2d1414;
   --safe:       #22c55e;
@@ -17,7 +17,7 @@
   --text-muted: #555580;
   --radius:     10px;
   --radius-sm:  7px;
-  --font:       'Poppins', sans-serif;
+  --font:       'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
 * {
@@ -60,7 +60,7 @@ body {
 }
 
 .badge {
-  background: rgba(124, 92, 252, 0.2);
+  background: rgba(37, 99, 235, 0.2);
   padding: 4px 10px;
   border-radius: 20px;
   font-size: 10px;
@@ -196,7 +196,7 @@ body {
 #textInput:focus {
   outline: none;
   border-color: var(--accent);
-  box-shadow: 0 0 0 2px rgba(124, 92, 252, 0.1);
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
 }
 
 #textInput::placeholder {
@@ -358,7 +358,7 @@ body {
 }
 
 .scan-status.info {
-  background: rgba(124, 92, 252, 0.15);
+  background: rgba(37, 99, 235, 0.15);
   color: var(--accent);
   border: 1px solid var(--accent);
 }
@@ -729,7 +729,7 @@ button:disabled {
 }
 
 .profile-scan-status.info {
-  background: rgba(124, 92, 252, 0.15);
+  background: rgba(37, 99, 235, 0.15);
   color: var(--accent);
   border: 1px solid var(--accent);
 }

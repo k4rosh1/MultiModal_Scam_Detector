@@ -55,7 +55,7 @@
 }
 .plat-btn:hover { color: var(--text); border-color: var(--border2); }
 .plat-btn.plat-active {
-  background: rgba(124, 92, 252, 0.12);
+  background: rgba(37, 99, 235, 0.12);
   border-color: var(--accent);
   color: var(--accent);
 }
@@ -298,8 +298,8 @@
 
 /* Duplicate cache banner */
 .duplicate-banner {
-  background: rgba(124, 92, 252, 0.1);
-  border: 1px solid rgba(124, 92, 252, 0.35);
+  background: rgba(37, 99, 235, 0.1);
+  border: 1px solid rgba(37, 99, 235, 0.35);
   border-radius: var(--radius-sm);
   padding: 6px 10px;
   font-size: 11px;
@@ -342,7 +342,7 @@
   text-align: center;
 }
 .qr-dropzone:hover { border-color: var(--accent); background: var(--surface3); }
-.qr-dropzone.dragging { border-color: var(--accent); background: rgba(124,92,252,0.08); }
+.qr-dropzone.dragging { border-color: var(--accent); background: rgba(37, 99, 235,0.08); }
 .qr-dropzone.has-file { border-style: solid; border-color: var(--accent); padding: 10px; }
 
 .qr-preview-img {
@@ -444,8 +444,8 @@
 
 /* Duplicate banner */
 .duplicate-banner {
-  background: rgba(124, 92, 252, 0.1);
-  border: 1px solid rgba(124, 92, 252, 0.35);
+  background: rgba(37, 99, 235, 0.1);
+  border: 1px solid rgba(37, 99, 235, 0.35);
   border-radius: var(--radius-sm);
   padding: 6px 10px;
   font-size: 11px;

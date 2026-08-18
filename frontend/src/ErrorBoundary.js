@@ -1,5 +1,5 @@
 // frontend/src/components/ErrorBoundary.js
-import React from 'react';
+import React from "react";
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -12,35 +12,37 @@ class ErrorBoundary extends React.Component {
   }
 
   componentDidCatch(error, errorInfo) {
-    console.error('Error caught by boundary:', error, errorInfo);
+    console.error("Error caught by boundary:", error, errorInfo);
     this.setState({ errorInfo: errorInfo });
   }
 
   render() {
     if (this.state.hasError) {
       return (
-        <div style={{
-          padding: '20px',
-          background: '#1a1a2e',
-          color: '#e0e0f0',
-          borderRadius: '8px',
-          margin: '20px'
-        }}>
+        <div
+          style={{
+            padding: "20px",
+            background: "#1a1a2e",
+            color: "#e0e0f0",
+            borderRadius: "8px",
+            margin: "20px",
+          }}
+        >
           <h2>Something went wrong</h2>
-          <details style={{ whiteSpace: 'pre-wrap', marginTop: '10px' }}>
+          <details style={{ whiteSpace: "pre-wrap", marginTop: "10px" }}>
             <summary>Error details</summary>
-            <p style={{ color: '#f05252' }}>{this.state.error?.toString()}</p>
+            <p style={{ color: "#f05252" }}>{this.state.error?.toString()}</p>
           </details>
-          <button 
+          <button
             onClick={() => window.location.reload()}
             style={{
-              marginTop: '15px',
-              padding: '8px 16px',
-              background: '#7c5cfc',
-              color: 'white',
-              border: 'none',
-              borderRadius: '6px',
-              cursor: 'pointer'
+              marginTop: "15px",
+              padding: "8px 16px",
+              background: "#2563eb",
+              color: "white",
+              border: "none",
+              borderRadius: "6px",
+              cursor: "pointer",
             }}
           >
             Reload Page

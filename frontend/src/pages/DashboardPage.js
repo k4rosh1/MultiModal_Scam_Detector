@@ -90,7 +90,7 @@ export default function DashboardPage() {
 
   const platData = stats
     ? [
-        { name: "Facebook", value: stats.facebook_total, fill: "#7c5cfc" },
+        { name: "Facebook", value: stats.facebook_total, fill: "#2563eb" },
         { name: "X (Twitter)", value: stats.twitter_total, fill: "#a78bfa" },
       ]
     : [];
