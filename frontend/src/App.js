@@ -46,49 +46,31 @@ function Navbar({ theme, toggleTheme }) {
 
   return (
     <nav className="navbar">
-      <NavLink to="/" className="navbar-brand" title="Back to home">
-        <div className="brand-icon">P</div>
-        <div>
-          <div className="brand-name">Protego</div>
-          <div className="brand-sub">mBERT · Early Fusion · Taglish</div>
-        </div>
-      </NavLink>
-
-      <div className="navbar-links">
-        <NavLink
-          to="/detect"
-          className={({ isActive }) =>
-            isActive ? "nav-link active" : "nav-link"
-          }
-        >
-          Detect
-        </NavLink>
-        <NavLink
-          to="/dashboard"
-          className={({ isActive }) =>
-            isActive ? "nav-link active" : "nav-link"
-          }
-        >
-          Dashboard
-        </NavLink>
-        <NavLink
-          to="/history"
-          className={({ isActive }) =>
-            isActive ? "nav-link active" : "nav-link"
-          }
-        >
-          History
+      <div className="navbar-left">
+        <NavLink to="/" className="navbar-brand" title="Back to home">
+          <img src="/logo.png" alt="Protego" className="dashboard-logo-img" />
+          <span className="brand-name">Protego</span>
         </NavLink>
       </div>
 
+      <div className="navbar-links">
+        <NavLink to="/detect" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>Detect</NavLink>
+        <NavLink to="/dashboard" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>Dashboard</NavLink>
+        <NavLink to="/history" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>History</NavLink>
+      </div>
+
       <div className="navbar-right">
-        <button
-          className="theme-toggle"
-          onClick={toggleTheme}
-          title="Toggle light/dark mode"
-        >
-          {theme === "dark" ? "☀️" : "🌙"}
-        </button>
+        <div className="pill-container">
+          <button
+            className="theme-toggle"
+            onClick={toggleTheme}
+            title="Toggle light/dark mode"
+          >
+            <span style={{ opacity: theme === 'dark' ? 1 : 0.3 }}>🌙</span>
+            <span style={{ opacity: theme === 'light' ? 1 : 0.3 }}>☀️</span>
+          </button>
+        </div>
+        
         <div className={`navbar-status ${online === false ? "offline" : ""}`}>
           <span
             className={`status-dot ${online === true ? "online" : online === false ? "offline" : ""}`}
@@ -113,15 +95,24 @@ function AppContent({ theme, toggleTheme }) {
 
   return (
     <>
-      {!hideNavbar && <Navbar theme={theme} toggleTheme={toggleTheme} />}
-      <main className={location.pathname === "/" ? "promo-main" : "app-main"}>
-        <Routes>
-          <Route path="/" element={<PromoPage />} />
-          <Route path="/detect" element={<DetectPage />} />
-          <Route path="/dashboard" element={<DashboardPage />} />
-          <Route path="/history" element={<HistoryPage />} />
-        </Routes>
-      </main>
+      {hideNavbar ? (
+        <main className="promo-main">
+          <Routes>
+            <Route path="/" element={<PromoPage />} />
+          </Routes>
+        </main>
+      ) : (
+        <div className="app-wrapper">
+          <Navbar theme={theme} toggleTheme={toggleTheme} />
+          <main className="app-main">
+            <Routes>
+              <Route path="/detect" element={<DetectPage />} />
+              <Route path="/dashboard" element={<DashboardPage />} />
+              <Route path="/history" element={<HistoryPage />} />
+            </Routes>
+          </main>
+        </div>
+      )}
     </>
   );
 }

@@ -8,39 +8,39 @@
   --surface3:   #1f1f28;
   --border:     #25252e;
   --border2:    #32323e;
-  --accent:     #2563eb;
-  --accent2:    #1d4ed8;
-  --accent-dim: rgba(37, 99, 235, 0.08);
+  --accent:     #4fc987;
+  --accent2:    #3da36c;
+  --accent-dim: rgba(79, 201, 135, 0.15);
   --danger:     #ef4444;
-  --danger-dim: rgba(239, 68, 68, 0.08);
-  --safe:       #22c55e;
-  --safe-dim:   rgba(34, 197, 94, 0.08);
+  --danger-dim: rgba(239, 68, 68, 0.15);
+  --safe:       #4fc987;
+  --safe-dim:   rgba(79, 201, 135, 0.15);
   --warn:       #f59e0b;
   --text:       #f0f0f5;
   --text-dim:   #9898a8;
   --text-muted: #55556a;
-  --radius:     8px;
-  --radius-sm:  6px;
+  --radius:     12px;
+  --radius-sm:  8px;
   --font:       'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
 }
 
 /* ── Light mode ── */
 [data-theme="light"] {
-  --bg:         #f8f8fa;
+  --bg:         #f4f6f8;
   --surface:    #ffffff;
-  --surface2:   #f0f0f5;
-  --surface3:   #e8e8ee;
-  --border:     #dcdce5;
-  --border2:    #c5c5d0;
-  --accent:     #2563eb;
-  --accent2:    #1d4ed8;
-  --accent-dim: rgba(37, 99, 235, 0.06);
+  --surface2:   #f9fafb;
+  --surface3:   #f3f4f6;
+  --border:     #eaeaea;
+  --border2:    #d1d5db;
+  --accent:     #2c6e49;
+  --accent2:    #1f5035;
+  --accent-dim: rgba(44, 110, 73, 0.08);
   --danger:     #dc2626;
-  --danger-dim: rgba(220, 38, 38, 0.06);
-  --safe:       #16a34a;
-  --safe-dim:   rgba(22, 163, 74, 0.06);
+  --danger-dim: rgba(220, 38, 38, 0.08);
+  --safe:       #2c6e49;
+  --safe-dim:   rgba(44, 110, 73, 0.08);
   --warn:       #d97706;
-  --text:       #0a0a0f;
+  --text:       #1a1a1a;
   --text-dim:   #4a4a5a;
   --text-muted: #8888a0;
 }
@@ -99,7 +99,7 @@ body {
 .btn-danger { background: transparent; color: var(--danger); border: 1px solid var(--danger); }
 .btn-danger:hover { background: var(--danger-dim); }
 
-.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.btn:disabled { cursor: not-allowed; opacity: 0.9; filter: saturate(0.8); }
 
 .tag {
   display: inline-flex;

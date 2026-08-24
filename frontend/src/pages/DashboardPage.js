@@ -83,16 +83,16 @@ export default function DashboardPage() {
 
   const pieData = stats
     ? [
-        { name: "Legitimate", value: stats.legit_count },
-        { name: "Scam", value: stats.scam_count },
-      ]
+      { name: "Legitimate", value: stats.legit_count },
+      { name: "Scam", value: stats.scam_count },
+    ]
     : [];
 
   const platData = stats
     ? [
-        { name: "Facebook", value: stats.facebook_total, fill: "#2563eb" },
-        { name: "X (Twitter)", value: stats.twitter_total, fill: "#a78bfa" },
-      ]
+      { name: "Facebook", value: stats.facebook_total, fill: "#2563eb" },
+      { name: "X (Twitter)", value: stats.twitter_total, fill: "#a78bfa" },
+    ]
     : [];
 
   const hourlyData = (() => {

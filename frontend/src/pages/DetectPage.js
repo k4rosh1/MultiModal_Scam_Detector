@@ -419,14 +419,23 @@ export default function DetectPage() {
   return (
     <div className="detect-page">
       <div className="page-header">
-        <div>
-          <h1 className="page-title">Scam Detector</h1>
-          <p className="page-sub">
-            Enter a post caption, provide account metadata, or upload a QR code.
-          </p>
+        <div className="header-left">
+          <div className="header-icon-circle">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path>
+              <path d="M9 12l2 2 4-4"></path>
+            </svg>
+          </div>
+          <div>
+            <h1 className="page-title">Scam Detector</h1>
+            <p className="page-sub">
+              Enter a post caption, provide account metadata, or upload a QR code
+            </p>
+          </div>
         </div>
         {online === false && (
           <div className="offline-banner">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
             API is offline — start the FastAPI server first
           </div>
         )}
@@ -446,6 +455,7 @@ export default function DetectPage() {
                 setError("");
               }}
             >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3.61l.39-4H14V7a1 1 0 0 1 1-1h3z"></path></svg>
               Facebook
             </button>
             <button
@@ -457,16 +467,18 @@ export default function DetectPage() {
                 setError("");
               }}
             >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="4" y1="4" x2="20" y2="20"></line><line x1="20" y1="4" x2="4" y2="20"></line></svg>
               X (Twitter)
             </button>
             <button
-              className={`plat-btn ${mode === "qr" ? "plat-active plat-qr" : ""}`}
+              className={`plat-btn ${mode === "qr" ? "plat-active" : ""}`}
               onClick={() => {
                 setMode("qr");
                 setResult(null);
                 setError("");
               }}
             >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><rect x="7" y="7" width="3" height="3"></rect><rect x="14" y="7" width="3" height="3"></rect><rect x="7" y="14" width="3" height="3"></rect><rect x="14" y="14" width="3" height="3"></rect></svg>
               QR Code
             </button>
           </div>
@@ -524,22 +536,18 @@ export default function DetectPage() {
                     value={text}
                     onChange={(e) => setText(e.target.value)}
                     rows={8}
+                    maxLength={2000}
                   />
-                  <div className="char-count">{text.length} characters</div>
-                  <div className="examples-wrap">
-                    {/* <span className="examples-label">Try an example:</span>
-                    <button
-                      className="example-btn scam-ex"
-                      onClick={fillScamSample}
-                    >
-                      🚨 Scam sample
-                    </button>
-                    <button
-                      className="example-btn legit-ex"
-                      onClick={fillLegitSample}
-                    >
-                      ✅ Legit sample
-                    </button> */}
+                  <div className="char-count">{text.length} / 2,000 characters</div>
+                  
+                  <div className="info-box">
+                    <div className="info-box-header">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                      Supports Tagalog, English, and Taglish
+                    </div>
+                    <div className="info-box-body">
+                      Our model understands mixed languages for more accurate detection.
+                    </div>
                   </div>
                 </div>
               )}
@@ -603,10 +611,14 @@ export default function DetectPage() {
                       <span className="spinner" /> Analysing...
                     </>
                   ) : (
-                    <>Analyse Post</>
+                    <>
+                      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                      Analyse Post
+                    </>
                   )}
                 </button>
-                <button className="btn btn-ghost" onClick={handleReset}>
+                <button className="btn btn-ghost reset-btn" onClick={handleReset}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21.5 2v6h-6M21.34 15.57a10 10 0 1 1-.59-9.21L21.5 8"></path></svg>
                   Reset
                 </button>
               </div>
@@ -618,35 +630,25 @@ export default function DetectPage() {
         <div className="result-panel">
           {!result && !loading && (
             <div className="result-placeholder">
-              <div className="placeholder-icon">{isQR ? "" : ""}</div>
-              <p className="placeholder-title">Ready to analyse</p>
+              <img src="/logo.png" alt="Protego" className="placeholder-logo" />
+              <h2 className="placeholder-title">Ready to analyze</h2>
               <p className="placeholder-sub">
                 {isQR
                   ? "Upload a QR code image and click Scan QR Code."
                   : "Enter a post caption and click Analyse Post."}
               </p>
-              <div className="placeholder-tips">
+              <div className="placeholder-bullets">
                 {isQR ? (
                   <>
-                    <div className="tip">
-                      Supports text, URLs, and social media links inside QR
-                    </div>
-                    <div className="tip">
-                      Pure image or video QR codes will be rejected
-                    </div>
-                    <div className="tip">
-                      Social media URLs: post caption auto-extracted
-                    </div>
+                    <div className="bullet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg> Supports text, URLs, and social media links</div>
+                    <div className="bullet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg> Fast and secure scanning</div>
+                    <div className="bullet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg> Automatic redirection parsing</div>
                   </>
                 ) : (
                   <>
-                    <div className="tip">
-                      Pick the account's join date for accuracy
-                    </div>
-                    <div className="tip">
-                      Supports Tagalog, English, and Taglish
-                    </div>
-                    <div className="tip">Powered by mBERT + Early Fusion</div>
+                    <div className="bullet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg> Pick the account's join date for accuracy</div>
+                    <div className="bullet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg> Supports Tagalog, English, and Taglish</div>
+                    <div className="bullet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg> Powered by mBERT + Early Fusion + Metadata</div>
                   </>
                 )}
               </div>
