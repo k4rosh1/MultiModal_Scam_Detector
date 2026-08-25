@@ -972,31 +972,45 @@ def fill_legit_template(template):
 
 def generate_scam_metadata():
     """Generate metadata for a scam account."""
-    # ~85% standard range, ~15% slightly older accounts (boundary overlap)
-    if random.random() < 0.85:
+    # ~55% typical scam (new account, high frequency)
+    # ~15% medium-age accounts (could be either class)
+    # ~15% old/hacked accounts (legitimate-looking age)
+    # ~15% low posting frequency (stealthy scammers)
+    roll = random.random()
+    if roll < 0.55:
         age = random.randint(1, 60)
-    else:
-        age = random.randint(61, 90)
-
-    if random.random() < 0.85:
         freq = round(random.uniform(5.0, 30.0), 2)
+    elif roll < 0.70:
+        age = random.randint(60, 365)
+        freq = round(random.uniform(3.0, 20.0), 2)
+    elif roll < 0.85:
+        age = random.randint(365, 2000)
+        freq = round(random.uniform(5.0, 25.0), 2)
     else:
-        freq = round(random.uniform(4.0, 5.0), 2)
+        age = random.randint(1, 120)
+        freq = round(random.uniform(0.5, 4.0), 2)
     return age, freq
 
 
 def generate_legit_metadata():
     """Generate metadata for a legitimate account."""
-    # ~90% standard range, ~10% younger accounts (boundary overlap)
-    if random.random() < 0.90:
+    # ~55% typical legit (old account, low frequency)
+    # ~15% medium-age accounts (could be either class)
+    # ~15% brand new legit users (just joined)
+    # ~15% high posting frequency (active but legit users)
+    roll = random.random()
+    if roll < 0.55:
         age = random.randint(300, 3000)
-    else:
-        age = random.randint(200, 300)
-
-    if random.random() < 0.90:
+        freq = round(random.uniform(0.1, 3.0), 2)
+    elif roll < 0.70:
+        age = random.randint(60, 365)
+        freq = round(random.uniform(0.5, 5.0), 2)
+    elif roll < 0.85:
+        age = random.randint(1, 60)
         freq = round(random.uniform(0.1, 3.0), 2)
     else:
-        freq = round(random.uniform(3.0, 4.0), 2)
+        age = random.randint(300, 2000)
+        freq = round(random.uniform(5.0, 20.0), 2)
     return age, freq
 
 
