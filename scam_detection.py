@@ -2,21 +2,6 @@
 # Multi-Modal Scam Detection System
 # mBERT (Multilingual BERT) + Metadata — Early Fusion Architecture
 # =============================================================================
-#
-# PIPELINE:
-#   Step 1 - Text Processing   : mBERT tokenization → [CLS] token → 768-dim vector
-#   Step 2 - Metadata Norm     : MinMaxScaler on account_age + posting_frequency
-#   Step 3 - Early Fusion      : Concatenate 768 + 2 = 770-dim unified vector
-#   Step 4 - Classification    : Single FC layer + Softmax → Scam / Legitimate
-#   Step 5 - Training          : AdamW, lr=2e-5, CrossEntropyLoss, 5 epochs
-#   Step 6 - Evaluation        : Model A (text-only) vs Model B (multi-modal)
-#   Step 7 - Risk Score        : softmax probability of Scam class × 100
-#
-# USAGE:
-#   Step 1: python generate_fake_dataset.py
-#   Step 2: python scam_detection.py
-# =============================================================================
-
 
 # ── IMPORTS ───────────────────────────────────────────────────────────────────
 import os
@@ -47,57 +32,6 @@ EPOCHS        = 5         # fixed 5 epochs as per spec
 LR            = 2e-5      # AdamW learning rate
 METADATA_COLS = ["account_age", "posting_frequency"]   # only 2 metadata features
 
-print(f"Using device: {DEVICE}")
-
-
-# ── STEP 1: LOAD DATASET ──────────────────────────────────────────────────────
-print("\n[1/8] Loading dataset...")
-df = pd.read_csv("merged_real_dataset.csv")
-print(f"   Total samples: {len(df)}  |  Scam: {df['label'].sum()}  |  Legit: {(df['label']==0).sum()}")
-
-# Separate text, metadata, and labels
-X_text = df["text"].values
-X_meta = df[METADATA_COLS].values.astype(np.float32)
-y      = df["label"].values
-
-
-# ── STEP 2: SPLIT DATASET (80% train / 10% val / 10% test) ───────────────────
-print("\n[2/8] Splitting data (80% train / 10% val / 10% test)...")
-
-# First split: 80% train, 20% temp
-X_text_train, X_text_temp, X_meta_train, X_meta_temp, y_train, y_temp = train_test_split(
-    X_text, X_meta, y, test_size=0.20, random_state=42, stratify=y
-)
-
-# Second split: 50/50 of the 20% temp → 10% val, 10% test
-X_text_val, X_text_test, X_meta_val, X_meta_test, y_val, y_test = train_test_split(
-    X_text_temp, X_meta_temp, y_temp, test_size=0.50, random_state=42, stratify=y_temp
-)
-
-print(f"   Train: {len(y_train)}  |  Val: {len(y_val)}  |  Test: {len(y_test)}")
-
-
-# ── STEP 3: NORMALIZE METADATA (MinMaxScaler) ─────────────────────────────────
-print("\n[3/8] Normalizing metadata with MinMaxScaler...")
-
-# Fit ONLY on training data to prevent data leakage
-scaler         = MinMaxScaler()
-X_meta_train   = scaler.fit_transform(X_meta_train)   # fit + transform on train
-X_meta_val     = scaler.transform(X_meta_val)          # transform only on val
-X_meta_test    = scaler.transform(X_meta_test)         # transform only on test
-
-# Save scaler for inference and API use
-os.makedirs("./scam_model", exist_ok=True)
-joblib.dump(scaler, "./scam_model/scaler.pkl")
-print("   ✅ MinMaxScaler fitted and saved to ./scam_model/scaler.pkl")
-
-
-# ── STEP 4: LOAD mBERT TOKENIZER ─────────────────────────────────────────────
-print(f"\n[4/8] Loading mBERT tokenizer: {MODEL_NAME}...")
-tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
-tokenizer.save_pretrained("./scam_model")
-print("   ✅ Tokenizer saved to ./scam_model/")
-
 
 # ── DATASET CLASS ─────────────────────────────────────────────────────────────
 class ScamDataset(Dataset):
@@ -115,7 +49,6 @@ class ScamDataset(Dataset):
         return len(self.texts)
 
     def __getitem__(self, idx):
-        # Tokenize the text using mBERT WordPiece tokenizer
         enc = self.tokenizer(
             str(self.texts[idx]),
             max_length=self.max_len,
@@ -131,58 +64,18 @@ class ScamDataset(Dataset):
         }
 
 
-# ── BUILD DATALOADERS ─────────────────────────────────────────────────────────
-train_loader = DataLoader(ScamDataset(X_text_train, X_meta_train, y_train, tokenizer, MAX_LEN), batch_size=BATCH_SIZE, shuffle=True)
-val_loader   = DataLoader(ScamDataset(X_text_val,   X_meta_val,   y_val,   tokenizer, MAX_LEN), batch_size=BATCH_SIZE)
-test_loader  = DataLoader(ScamDataset(X_text_test,  X_meta_test,  y_test,  tokenizer, MAX_LEN), batch_size=BATCH_SIZE)
-
-
-# ── STEP 5: MODEL ARCHITECTURE ───────────────────────────────────────────────
-print("\n[5/8] Building models...")
-
-# ── Model A: Text-Only Baseline (768-dim CLS only) ────────────────────────────
-class TextOnlyBaseline(nn.Module):
-    """
-    Baseline model using only the mBERT [CLS] token (768-dim).
-    Single fully connected layer + softmax for binary classification.
-    """
-    def __init__(self, bert_model_name):
-        super().__init__()
-        self.bert = AutoModel.from_pretrained(bert_model_name)
-
-        # Single FC layer: 768 → 2 classes
-        self.classifier = nn.Linear(768, 2)
-
-    def forward(self, input_ids, attention_mask, metadata=None):
-        # Extract [CLS] token from last hidden state → 768-dim vector
-        bert_out      = self.bert(input_ids=input_ids, attention_mask=attention_mask)
-        cls_embedding = bert_out.last_hidden_state[:, 0, :]   # [batch, 768]
-
-        # Single FC layer → logits (softmax applied in loss function)
-        return self.classifier(cls_embedding)
-
-
-# ── Model B: Multi-Modal Early Fusion (770-dim) ───────────────────────────────
+# ── MODEL ARCHITECTURE ────────────────────────────────────────────────────────
 class EarlyFusionScamDetector(nn.Module):
     """
-    Multi-modal model with a learned metadata projection (instead of raw
-    concatenation) and modality dropout, to prevent the 768-dim text
-    embedding from drowning out the 2-dim metadata signal.
+    Multi-modal early fusion model.
+    Fuses 768-dim text embedding with 2-dim metadata.
     """
     def __init__(self, bert_model_name, meta_dropout_p=0.15):
         super().__init__()
         self.bert = AutoModel.from_pretrained(bert_model_name)
 
-        # Metadata gets its own small MLP so it has comparable
-        # representational capacity to the 768-dim text embedding.
-        self.meta_proj = nn.Sequential(
-            nn.Linear(2, 32),
-            nn.ReLU(),
-            nn.Linear(32, 32),
-        )
-
-        # Fused: 768 (text) + 32 (projected metadata) = 800
-        self.classifier = nn.Linear(768 + 32, 2)
+        # 768 (text) + 2 (metadata) = 770-dim
+        self.classifier = nn.Linear(768 + 2, 2)
 
         self.meta_dropout_p = meta_dropout_p
 
@@ -190,11 +83,7 @@ class EarlyFusionScamDetector(nn.Module):
         bert_out      = self.bert(input_ids=input_ids, attention_mask=attention_mask)
         cls_embedding = bert_out.last_hidden_state[:, 0, :]   # [batch, 768]
 
-        meta_features = self.meta_proj(metadata)              # [batch, 32]
-
-        # Modality dropout: during training, randomly zero out the TEXT
-        # embedding for a fraction of samples, forcing the model to learn
-        # to classify from metadata alone on those samples.
+        # Modality dropout
         if training:
             batch_size = cls_embedding.size(0)
             drop_mask  = torch.rand(batch_size, device=cls_embedding.device) < self.meta_dropout_p
@@ -202,41 +91,25 @@ class EarlyFusionScamDetector(nn.Module):
                 cls_embedding = cls_embedding.clone()
                 cls_embedding[drop_mask] = 0.0
 
-        fused = torch.cat([cls_embedding, meta_features], dim=1)  # [batch, 800]
+        fused = torch.cat([cls_embedding, metadata], dim=1)  # [batch, 770]
         return self.classifier(fused)
 
 
-# ── STEP 6: TRAINING FUNCTION ────────────────────────────────────────────────
+# ── TRAINING FUNCTION ────────────────────────────────────────────────
 def train_model(model, train_loader, val_loader, model_name="Model"):
-    """
-    Trains the model for a fixed number of epochs.
-    Saves the best model checkpoint based on validation F1.
-    """
     model.to(DEVICE)
 
-    is_multimodal = hasattr(model, "meta_proj")
-
-    # Give the metadata branch a higher learning rate than BERT, since its
-    # gradients are much smaller/noisier per step relative to a 110M-param
-    # transformer being fine-tuned at the same time.
-    if is_multimodal:
-        optimizer = torch.optim.AdamW([
-            {"params": model.bert.parameters(),       "lr": LR},
-            {"params": model.meta_proj.parameters(),  "lr": 1e-3},
-            {"params": model.classifier.parameters(), "lr": 1e-3},
-        ], weight_decay=0.01)
-    else:
-        optimizer = torch.optim.AdamW(model.parameters(), lr=LR, weight_decay=0.01)
+    optimizer = torch.optim.AdamW([
+        {"params": model.bert.parameters(),       "lr": LR},
+        {"params": model.classifier.parameters(), "lr": 1e-3},
+    ], weight_decay=0.01)
 
     loss_fn   = nn.CrossEntropyLoss()
-
     history    = {"train_loss": [], "val_loss": [], "val_acc": [], "val_f1": []}
     best_f1    = 0.0
     best_state = None
 
     for epoch in range(EPOCHS):
-
-        # ── Training phase ────────────────────────────────────────────────
         model.train()
         total_loss = 0
         for batch in tqdm(train_loader, desc=f"[{model_name}] Epoch {epoch+1}/{EPOCHS} Train"):
@@ -246,10 +119,7 @@ def train_model(model, train_loader, val_loader, model_name="Model"):
             labels         = batch['label'].to(DEVICE)
 
             optimizer.zero_grad()
-            if is_multimodal:
-                logits = model(input_ids, attention_mask, metadata, training=True)
-            else:
-                logits = model(input_ids, attention_mask, metadata)
+            logits = model(input_ids, attention_mask, metadata, training=True)
             loss   = loss_fn(logits, labels)
             loss.backward()
 
@@ -259,7 +129,6 @@ def train_model(model, train_loader, val_loader, model_name="Model"):
 
         avg_train_loss = total_loss / len(train_loader)
 
-        # ── Validation phase ──────────────────────────────────────────────
         model.eval()
         val_loss, all_preds, all_labels = 0, [], []
         with torch.no_grad():
@@ -306,12 +175,8 @@ def train_model(model, train_loader, val_loader, model_name="Model"):
     return history
 
 
-# ── STEP 7: EVALUATION FUNCTION ──────────────────────────────────────────────
+# ── EVALUATION FUNCTION ──────────────────────────────────────────────
 def evaluate_model(model, test_loader, model_name="Model"):
-    """
-    Evaluates model on the held-out test set.
-    Returns accuracy, precision, recall, and F1-score.
-    """
     model.eval()
     all_preds, all_labels = [], []
 
@@ -345,177 +210,87 @@ def evaluate_model(model, test_loader, model_name="Model"):
             "preds": all_preds, "labels": all_labels}
 
 
-# ── TRAIN MODEL A: TEXT-ONLY BASELINE ────────────────────────────────────────
-print("\n[6/8] Training Model A — Text-Only Baseline (mBERT only)...")
-baseline_model   = TextOnlyBaseline(bert_model_name=MODEL_NAME)
-baseline_history = train_model(baseline_model, train_loader, val_loader, "Baseline")
+# ── MAIN EXECUTION ────────────────────────────────────────────────────────────
+if __name__ == "__main__":
+    print(f"Using device: {DEVICE}")
 
+    print("\n[1/7] Loading dataset...")
+    df = pd.read_csv("merged_real_dataset.csv")
+    print(f"   Total samples: {len(df)}  |  Scam: {df['label'].sum()}  |  Legit: {(df['label']==0).sum()}")
 
-# ── TRAIN MODEL B: MULTI-MODAL EARLY FUSION ───────────────────────────────────
-print("\n[7/8] Training Model B — Multi-Modal Early Fusion (mBERT + Metadata)...")
-multimodal_model   = EarlyFusionScamDetector(bert_model_name=MODEL_NAME)
-multimodal_history = train_model(multimodal_model, train_loader, val_loader, "MultiModal")
+    X_text = df["text"].values
+    X_meta = df[METADATA_COLS].values.astype(np.float32)
+    y      = df["label"].values
 
-# Save the multi-modal model and tokenizer
-torch.save(multimodal_model.state_dict(), "./scam_model/model.pt")
-print("\n✅ Model saved to ./scam_model/model.pt")
-
-
-# ── STEP 8: EVALUATE BOTH MODELS ON TEST SET ─────────────────────────────────
-print("\n[8/8] Evaluating both models on held-out test set...")
-
-baseline_results   = evaluate_model(baseline_model,   test_loader, "Model A — Text-Only Baseline")
-multimodal_results = evaluate_model(multimodal_model, test_loader, "Model B — Multi-Modal Early Fusion")
-
-# ── Side-by-side comparison ───────────────────────────────────────────────────
-print(f"\n{'='*55}")
-print(f"  Model A vs Model B — Side-by-Side Comparison")
-print(f"{'='*55}")
-metrics = ["accuracy", "precision", "recall", "f1"]
-for m in metrics:
-    a   = baseline_results[m]
-    b   = multimodal_results[m]
-    diff = b - a
-    sign = "++" if diff >= 0 else "--"
-    print(f"  {m.capitalize():10}: A={a:.4f} | B={b:.4f} | {sign}{abs(diff):.4f}")
-
-winner = "Model B (Multi-Modal)" if multimodal_results["f1"] >= baseline_results["f1"] else "Model A (Baseline)"
-print(f"\n  Winner by F1: {winner}")
-
-
-# ── GENERATE PLOTS ────────────────────────────────────────────────────────────
-os.makedirs("./results", exist_ok=True)
-epochs_x = list(range(1, EPOCHS + 1))
-
-# Training curves
-fig, axes = plt.subplots(1, 2, figsize=(12, 4))
-fig.suptitle("Model B — Multi-Modal Training Curves", fontsize=13, fontweight='bold')
-
-axes[0].plot(epochs_x, multimodal_history["train_loss"], label="Train Loss", marker='o')
-axes[0].plot(epochs_x, multimodal_history["val_loss"],   label="Val Loss",   marker='s')
-axes[0].set_title("Loss over Epochs")
-axes[0].set_xlabel("Epoch"); axes[0].set_ylabel("Loss"); axes[0].legend()
-
-axes[1].plot(epochs_x, multimodal_history["val_acc"], label="Val Accuracy", marker='o', color='green')
-axes[1].plot(epochs_x, multimodal_history["val_f1"],  label="Val F1",       marker='s', color='orange')
-axes[1].set_title("Accuracy & F1 over Epochs")
-axes[1].set_xlabel("Epoch"); axes[1].legend()
-
-plt.tight_layout()
-plt.savefig("./results/training_curves.png", dpi=150)
-plt.show()
-print("✅ Training curves saved to ./results/training_curves.png")
-
-# Confusion matrices
-fig, axes = plt.subplots(1, 2, figsize=(10, 4))
-fig.suptitle("Confusion Matrices — Model A vs Model B", fontsize=13, fontweight='bold')
-
-from sklearn.metrics import confusion_matrix
-for i, (res, title) in enumerate([
-    (baseline_results,   "Model A — Text-Only"),
-    (multimodal_results, "Model B — Multi-Modal"),
-]):
-    cm = confusion_matrix(res["labels"], res["preds"])
-    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', ax=axes[i],
-                xticklabels=["Legit","Scam"], yticklabels=["Legit","Scam"])
-    axes[i].set_title(title)
-    axes[i].set_ylabel("True"); axes[i].set_xlabel("Predicted")
-
-plt.tight_layout()
-plt.savefig("./results/confusion_matrices.png", dpi=150)
-plt.show()
-print("✅ Confusion matrices saved to ./results/confusion_matrices.png")
-
-# Model comparison bar chart
-fig, ax = plt.subplots(figsize=(9, 5))
-x      = np.arange(len(metrics))
-width  = 0.35
-bars_a = ax.bar(x - width/2, [baseline_results[m]   for m in metrics], width, label="Model A — Text-Only",   color='steelblue')
-bars_b = ax.bar(x + width/2, [multimodal_results[m] for m in metrics], width, label="Model B — Multi-Modal", color='darkorange')
-ax.set_xticks(x); ax.set_xticklabels([m.capitalize() for m in metrics])
-ax.set_ylim(0, 1.1); ax.set_ylabel("Score"); ax.set_title("Model A vs Model B — Performance Comparison")
-ax.legend()
-for bar in list(bars_a) + list(bars_b):
-    ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.01,
-            f"{bar.get_height():.3f}", ha='center', va='bottom', fontsize=9)
-plt.tight_layout()
-plt.savefig("./results/model_comparison.png", dpi=150)
-plt.show()
-print("✅ Model comparison saved to ./results/model_comparison.png")
-
-
-# ── INFERENCE FUNCTION ────────────────────────────────────────────────────────
-def predict(text, account_age, posting_frequency, model=multimodal_model,
-            tokenizer=tokenizer, scaler=scaler):
-    """
-    Inference function for single post prediction.
-
-    Args:
-        text              (str)   : The post caption (Taglish or English)
-        account_age       (int)   : Account age in days
-        posting_frequency (float) : Average posts per day
-
-    Returns:
-        label      (int)   : 1 = Scam, 0 = Legitimate
-        verdict    (str)   : "SCAM" or "LEGITIMATE"
-        risk_score (float) : Scam class softmax probability × 100
-    """
-    model.eval()
-
-    # Step 1: Tokenize text
-    enc = tokenizer(
-        text, max_length=MAX_LEN, padding='max_length',
-        truncation=True, return_tensors='pt'
+    print("\n[2/7] Splitting data (80% train / 10% val / 10% test)...")
+    X_text_train, X_text_temp, X_meta_train, X_meta_temp, y_train, y_temp = train_test_split(
+        X_text, X_meta, y, test_size=0.20, random_state=42, stratify=y
     )
-    input_ids      = enc['input_ids'].to(DEVICE)
-    attention_mask = enc['attention_mask'].to(DEVICE)
+    X_text_val, X_text_test, X_meta_val, X_meta_test, y_val, y_test = train_test_split(
+        X_text_temp, X_meta_temp, y_temp, test_size=0.50, random_state=42, stratify=y_temp
+    )
+    print(f"   Train: {len(y_train)}  |  Val: {len(y_val)}  |  Test: {len(y_test)}")
 
-    # Step 2: Normalize metadata using the fitted MinMaxScaler
-    meta_raw    = np.array([[account_age, posting_frequency]], dtype=np.float32)
-    meta_scaled = scaler.transform(meta_raw)
-    metadata    = torch.tensor(meta_scaled, dtype=torch.float32).to(DEVICE)
+    print("\n[3/7] Normalizing metadata with MinMaxScaler...")
+    scaler         = MinMaxScaler()
+    X_meta_train   = scaler.fit_transform(X_meta_train)
+    X_meta_val     = scaler.transform(X_meta_val)
+    X_meta_test    = scaler.transform(X_meta_test)
 
-    # Step 3: Run model and apply softmax
-    with torch.no_grad():
-        logits = model(input_ids, attention_mask, metadata)
-        probs  = torch.softmax(logits, dim=1)[0]
-        label  = logits.argmax(dim=1).item()
+    os.makedirs("./scam_model", exist_ok=True)
+    joblib.dump(scaler, "./scam_model/scaler.pkl")
+    print("   ✅ MinMaxScaler fitted and saved to ./scam_model/scaler.pkl")
 
-    # Step 7: Risk score = softmax probability of Scam class × 100
-    risk_score = probs[1].item() * 100
+    print(f"\n[4/7] Loading mBERT tokenizer: {MODEL_NAME}...")
+    tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
+    tokenizer.save_pretrained("./scam_model")
+    print("   ✅ Tokenizer saved to ./scam_model/")
 
-    return {
-        "label":      label,
-        "verdict":    "SCAM" if label == 1 else "LEGITIMATE",
-        "risk_score": f"{risk_score:.1f}%",
-    }
+    train_loader = DataLoader(ScamDataset(X_text_train, X_meta_train, y_train, tokenizer, MAX_LEN), batch_size=BATCH_SIZE, shuffle=True)
+    val_loader   = DataLoader(ScamDataset(X_text_val,   X_meta_val,   y_val,   tokenizer, MAX_LEN), batch_size=BATCH_SIZE)
+    test_loader  = DataLoader(ScamDataset(X_text_test,  X_meta_test,  y_test,  tokenizer, MAX_LEN), batch_size=BATCH_SIZE)
 
+    print("\n[5/7] Building and Training Proposed Model (Early Fusion)...")
+    multimodal_model = EarlyFusionScamDetector(bert_model_name=MODEL_NAME)
+    multimodal_history = train_model(multimodal_model, train_loader, val_loader, "ProposedModel")
 
-# ── SAMPLE INFERENCE ──────────────────────────────────────────────────────────
-print("\n" + "="*55)
-print("  SAMPLE INFERENCE")
-print("="*55)
+    torch.save(multimodal_model.state_dict(), "./scam_model/model.pt")
+    print("\n✅ Model saved to ./scam_model/model.pt")
 
-test_cases = [
-    {
-        "text":              "GRABE! Kumita ako ng 50000 pesos sa loob ng 7 araw! DM mo ko! 💰 bit.ly/earn123",
-        "account_age":       30,
-        "posting_frequency": 15.0,
-    },
-    {
-        "text":              "Kumain kami ni Maria sa Jollibee kanina. Masarap pa rin ang Chickenjoy! 😄",
-        "account_age":       800,
-        "posting_frequency": 1.2,
-    },
-]
+    print("\n[6/7] Evaluating model on held-out test set...")
+    results = evaluate_model(multimodal_model, test_loader, "Proposed Multi-Modal System")
 
-for i, case in enumerate(test_cases, 1):
-    result = predict(case["text"], case["account_age"], case["posting_frequency"])
-    print(f"\n  Test {i}:")
-    print(f"  Text      : {case['text'][:60]}...")
-    print(f"  Acct Age  : {case['account_age']} days")
-    print(f"  Post Freq : {case['posting_frequency']}/day")
-    print(f"  Verdict   : {result['verdict']}")
-    print(f"  Risk Score: {result['risk_score']}")
+    print("\n[7/7] Generating Plots...")
+    os.makedirs("./results", exist_ok=True)
+    epochs_x = list(range(1, EPOCHS + 1))
 
-print("\n✅ All done!")
+    # Training curves
+    fig, axes = plt.subplots(1, 2, figsize=(12, 4))
+    fig.suptitle("Proposed Model — Training Curves", fontsize=13, fontweight='bold')
+
+    axes[0].plot(epochs_x, multimodal_history["train_loss"], label="Train Loss", marker='o')
+    axes[0].plot(epochs_x, multimodal_history["val_loss"],   label="Val Loss",   marker='s')
+    axes[0].set_title("Loss over Epochs")
+    axes[0].set_xlabel("Epoch"); axes[0].set_ylabel("Loss"); axes[0].legend()
+
+    axes[1].plot(epochs_x, multimodal_history["val_acc"], label="Val Accuracy", marker='o', color='green')
+    axes[1].plot(epochs_x, multimodal_history["val_f1"],  label="Val F1",       marker='s', color='orange')
+    axes[1].set_title("Accuracy & F1 over Epochs")
+    axes[1].set_xlabel("Epoch"); axes[1].legend()
+
+    plt.tight_layout()
+    plt.savefig("./results/training_curves.png", dpi=150)
+    print("   ✅ Training curves saved to ./results/training_curves.png")
+
+    # Confusion matrix
+    plt.figure(figsize=(6, 5))
+    from sklearn.metrics import confusion_matrix
+    cm = confusion_matrix(results["labels"], results["preds"])
+    sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=["Legit","Scam"], yticklabels=["Legit","Scam"])
+    plt.title("Confusion Matrix — Proposed Model")
+    plt.ylabel("True"); plt.xlabel("Predicted")
+    plt.tight_layout()
+    plt.savefig("./results/confusion_matrix.png", dpi=150)
+    print("   ✅ Confusion matrix saved to ./results/confusion_matrix.png")
+
+    print("\n✅ Pipeline complete!")

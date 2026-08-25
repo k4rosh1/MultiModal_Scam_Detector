@@ -3,6 +3,11 @@
   "name": "Protego",
   "version": "1.0.0",
   "description": "AI-powered multimodal scam detection for social media",
+  "icons": {
+    "16": "icon.png",
+    "48": "icon.png",
+    "128": "icon.png"
+  },
   "permissions": [
     "activeTab",
     "storage",

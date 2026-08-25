@@ -10,18 +10,12 @@ class EarlyFusionScamDetector(nn.Module):
         super().__init__()
         from transformers import AutoModel
         self.bert       = AutoModel.from_pretrained(bert_model_name)
-        self.meta_proj  = nn.Sequential(
-            nn.Linear(2, 32),
-            nn.ReLU(),
-            nn.Linear(32, 32),
-        )
-        self.classifier = nn.Linear(768 + 32, 2)
+        self.classifier = nn.Linear(768 + 2, 2)
 
     def forward(self, input_ids, attention_mask, metadata):
         bert_out      = self.bert(input_ids=input_ids, attention_mask=attention_mask)
         cls_embedding = bert_out.last_hidden_state[:, 0, :]
-        meta_features = self.meta_proj(metadata)
-        fused         = torch.cat([cls_embedding, meta_features], dim=1)
+        fused         = torch.cat([cls_embedding, metadata], dim=1)
         return self.classifier(fused)
 
 class TextOnlyBaseline(nn.Module):
