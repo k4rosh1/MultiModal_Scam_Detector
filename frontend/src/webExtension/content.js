@@ -391,37 +391,61 @@ async function analyzePost(text, element, manual = false) {
 }
 
 function highlightPost(element, result, text) {
-  element.style.outline = "2px solid #f05252";
+  // Left-accent border + soft tint instead of a full outline — reads as a
+  // warning strip rather than a box that fights with the site's own layout.
+  element.style.borderLeft = "4px solid #f05252";
   element.style.backgroundColor = "rgba(240, 82, 82, 0.05)";
+  element.style.paddingLeft = "10px";
 
   if (!element.querySelector(".protego-badge")) {
+    // The badge must NEVER be inserted into the post's actual content flow
+    // (no prepend/append into the real text) — that's what was pushing into
+    // and covering the post's own text. Instead, position it as an absolute
+    // overlay in the corner, layered on top without affecting document flow.
+    const computedPosition = window.getComputedStyle(element).position;
+    if (computedPosition === "static") {
+      element.style.position = "relative";
+    }
+
     const badge = document.createElement("span");
     badge.className = "protego-badge";
     badge.textContent = "⚠️ SCAM";
     badge.style.cssText = `
+      position: absolute;
+      top: -10px;
+      right: 8px;
+      z-index: 2147483647;
       display: inline-block;
       background: #f05252;
       color: white;
       font-size: 10px;
-      padding: 2px 8px;
+      font-weight: 600;
+      padding: 3px 9px;
       border-radius: 4px;
-      margin-left: 8px;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.35);
       cursor: pointer;
+      pointer-events: auto;
     `;
-    badge.onclick = () =>
+    badge.onclick = (e) => {
+      e.stopPropagation();
+      e.preventDefault();
       alert(
         `⚠️ SCAM DETECTED!\n\nConfidence: ${result.confidence}\n\nText: ${text.substring(0, 200)}`,
       );
-    element.prepend(badge);
+    };
+    element.appendChild(badge);
   }
 }
 
 function clearHighlights() {
   document.querySelectorAll(".protego-badge").forEach((b) => b.remove());
-  document.querySelectorAll('[style*="outline"]').forEach((el) => {
-    el.style.outline = "";
-    el.style.backgroundColor = "";
-  });
+  document
+    .querySelectorAll('[style*="border-left: 4px solid"]')
+    .forEach((el) => {
+      el.style.borderLeft = "";
+      el.style.backgroundColor = "";
+      el.style.paddingLeft = "";
+    });
 }
 
 function startObserver() {
