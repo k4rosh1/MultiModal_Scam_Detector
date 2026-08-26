@@ -59,10 +59,7 @@ def main():
             labels         = batch['label'].to(DEVICE)
 
             logits = model(input_ids, attention_mask, metadata)
-            probs = torch.softmax(logits, dim=1)
-            # Increase threshold from default 0.5 to 0.75 to be more conservative 
-            # before calling something a scam (reduces False Positives = boosts Precision!)
-            preds = (probs[:, 1] > 0.75).long().cpu().numpy()
+            preds  = logits.argmax(dim=1).cpu().numpy()
             
             all_preds.extend(preds)
             all_labels.extend(labels.cpu().numpy())
