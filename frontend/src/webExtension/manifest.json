@@ -15,7 +15,7 @@
     "scripting"
   ],
   "host_permissions": [
-    "http://3.27.62.146:8000/*",
+    "https://protego.duckdns.org/*",
     "https://*.facebook.com/*",
     "https://*.twitter.com/*",
     "https://*.x.com/*"

@@ -11,7 +11,7 @@ if (typeof chrome === "undefined" || !chrome.runtime || !chrome.runtime.id) {
   throw new Error("Not running in Chrome extension context");
 }
 
-const API_URL = "http://3.27.62.146:8000";
+const API_URL = "https://protego.duckdns.org";
 
 const scanProfileBtn = document.getElementById("scanProfileBtn");
 const profileScanStatus = document.getElementById("profileScanStatus");
