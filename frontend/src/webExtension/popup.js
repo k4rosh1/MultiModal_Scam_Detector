@@ -121,7 +121,13 @@ async function detectSampleText(sampleData, isScamSample) {
 
 async function loadStats() {
   try {
-    const response = await fetch(`${API_URL}/stats`);
+    const sessionResult = await chrome.storage.local.get(['protego_session_id']);
+    let session = sessionResult.protego_session_id;
+    if (!session) {
+      session = Math.random().toString(36).substring(2, 15);
+      await chrome.storage.local.set({ protego_session_id: session });
+    }
+    const response = await fetch(`${API_URL}/stats?session_id=${session}`);
     if (!response.ok) throw new Error("Failed to fetch stats");
 
     const stats = await response.json();

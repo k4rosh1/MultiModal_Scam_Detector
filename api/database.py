@@ -63,10 +63,14 @@ def _make_hash(text: str, platform: str, account_age: float, posting_frequency: 
     raw = f"{text.strip().lower()}|{platform}|{round(account_age)}|{round(posting_frequency, 1)}"
     return hashlib.sha256(raw.encode()).hexdigest()
 
-def find_duplicate(text: str, platform: str, account_age: float, posting_frequency: float):
+def find_duplicate(text: str, platform: str, account_age: float, posting_frequency: float, session_id: str = None):
     h = _make_hash(text, platform, account_age, posting_frequency)
     with get_db() as conn:
-        row = conn.execute("SELECT * FROM detections WHERE text_hash=? ORDER BY id DESC LIMIT 1", (h,)).fetchone()
+        if session_id:
+            row = conn.execute("SELECT * FROM detections WHERE text_hash=? AND session_id=? ORDER BY id DESC LIMIT 1", (h, session_id)).fetchone()
+        else:
+            row = conn.execute("SELECT * FROM detections WHERE text_hash=? ORDER BY id DESC LIMIT 1", (h,)).fetchone()
+        
         if row:
             conn.execute("UPDATE detections SET duplicate_count = duplicate_count + 1 WHERE id=?", (row["id"],))
             conn.commit()

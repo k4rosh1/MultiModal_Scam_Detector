@@ -36,24 +36,35 @@ def get_detections(request: Request, limit: int = 100, platform: Optional[str] =
 
 @router.get("/stats")
 @config.limiter.limit("60/minute")
-def get_stats(request: Request):
+def get_stats(request: Request, session_id: Optional[str] = None):
     today = datetime.date.today().isoformat()
     with database.get_db() as conn:
-        row = conn.execute("""
-            SELECT
-                COUNT(*)                                      AS total,
-                SUM(CASE WHEN label=1 THEN 1 ELSE 0 END)     AS scam,
-                SUM(CASE WHEN label=0 THEN 1 ELSE 0 END)     AS legit,
-                SUM(CASE WHEN timestamp LIKE ? THEN 1 ELSE 0 END) AS today_ct
-            FROM detections
-        """, (f"{today}%",)).fetchone()
+        if session_id:
+            row = conn.execute("""
+                SELECT
+                    COUNT(*)                                      AS total,
+                    SUM(CASE WHEN label=1 THEN 1 ELSE 0 END)     AS scam,
+                    SUM(CASE WHEN label=0 THEN 1 ELSE 0 END)     AS legit,
+                    SUM(CASE WHEN timestamp LIKE ? THEN 1 ELSE 0 END) AS today_ct
+                FROM detections
+                WHERE session_id = ?
+            """, (f"{today}%", session_id)).fetchone()
+            all_rows = conn.execute("SELECT platform FROM detections WHERE session_id = ?", (session_id,)).fetchall()
+        else:
+            row = conn.execute("""
+                SELECT
+                    COUNT(*)                                      AS total,
+                    SUM(CASE WHEN label=1 THEN 1 ELSE 0 END)     AS scam,
+                    SUM(CASE WHEN label=0 THEN 1 ELSE 0 END)     AS legit,
+                    SUM(CASE WHEN timestamp LIKE ? THEN 1 ELSE 0 END) AS today_ct
+                FROM detections
+            """, (f"{today}%",)).fetchone()
+            all_rows = conn.execute("SELECT platform FROM detections").fetchall()
         
         total    = row["total"]    or 0
         scam     = row["scam"]     or 0
         legit    = row["legit"]    or 0
         today_ct = row["today_ct"] or 0
-
-        all_rows = conn.execute("SELECT platform FROM detections").fetchall()
 
     fb = sum(1 for r in all_rows if config.decrypt(r["platform"]) == "facebook")
     tw = sum(1 for r in all_rows if config.decrypt(r["platform"]) == "twitter")
@@ -70,8 +81,11 @@ def get_stats(request: Request):
     }
 
 @router.delete("/detections/clear")
-def clear_detections():
+def clear_detections(session_id: Optional[str] = None):
     with database.get_db() as conn:
-        conn.execute("DELETE FROM detections")
+        if session_id:
+            conn.execute("DELETE FROM detections WHERE session_id = ?", (session_id,))
+        else:
+            conn.execute("DELETE FROM detections")
         conn.commit()
-    return {"message": "All detections cleared."}
+    return {"message": "Detections cleared."}

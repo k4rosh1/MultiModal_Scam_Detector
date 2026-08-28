@@ -49,7 +49,8 @@ export async function predict(payload) {
 }
 
 export async function getStats() {
-  const res = await fetch(`${BASE}/stats`);
+  const sessionId = getSessionId();
+  const res = await fetch(`${BASE}/stats?session_id=${sessionId}`);
   if (!res.ok) throw new Error("Stats fetch failed");
   return res.json();
 }
@@ -65,7 +66,8 @@ export async function getDetections(limit = 100, platform = null) {
 }
 
 export async function clearDetections() {
-  const res = await fetch(`${BASE}/detections/clear`, { method: "DELETE" });
+  const sessionId = getSessionId();
+  const res = await fetch(`${BASE}/detections/clear?session_id=${sessionId}`, { method: "DELETE" });
   if (!res.ok) throw new Error("Clear failed");
   return res.json();
 }
@@ -84,6 +86,7 @@ export async function checkHealth() {
 export async function scanQR(file) {
   const formData = new FormData();
   formData.append("file", file);
+  formData.append("session_id", getSessionId());
   const res = await fetch(`${BASE}/scan-qr`, {
     method: "POST",
     body: formData,
