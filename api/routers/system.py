@@ -16,16 +16,23 @@ def health():
 
 @router.get("/detections")
 @config.limiter.limit("60/minute")
-def get_detections(request: Request, limit: int = 100, platform: Optional[str] = None):
+def get_detections(request: Request, limit: int = 100, platform: Optional[str] = None, session_id: Optional[str] = None):
     with database.get_db() as conn:
+        query = "SELECT * FROM detections"
+        params = []
+        if session_id:
+            query += " WHERE session_id = ?"
+            params.append(session_id)
+        
+        query += " ORDER BY id DESC LIMIT 500"
+        
+        rows = conn.execute(query, tuple(params)).fetchall()
+        result = [database.decrypt_row(dict(r)) for r in rows]
+        
         if platform:
-            rows = conn.execute("SELECT * FROM detections ORDER BY id DESC LIMIT 500").fetchall()
-            result = [database.decrypt_row(dict(r)) for r in rows]
-            result = [r for r in result if r["platform"] == platform][:limit]
-        else:
-            rows = conn.execute("SELECT * FROM detections ORDER BY id DESC LIMIT ?", (limit,)).fetchall()
-            result = [database.decrypt_row(dict(r)) for r in rows]
-    return result
+            result = [r for r in result if r["platform"] == platform]
+            
+        return result[:limit]
 
 @router.get("/stats")
 @config.limiter.limit("60/minute")

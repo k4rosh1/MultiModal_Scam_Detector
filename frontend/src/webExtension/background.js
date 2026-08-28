@@ -189,6 +189,13 @@ async function detectScam(
   }
 
   try {
+    const sessionResult = await chrome.storage.local.get(['protego_session_id']);
+    let session = sessionResult.protego_session_id;
+    if (!session) {
+      session = Math.random().toString(36).substring(2, 15);
+      await chrome.storage.local.set({ protego_session_id: session });
+    }
+
     console.log(
       `📤 Calling API for ${platform}... (account_age=${resolvedAccountAge}, posting_frequency=${resolvedPostingFrequency})`,
     );
@@ -201,6 +208,7 @@ async function detectScam(
         account_age: resolvedAccountAge,
         posting_frequency: resolvedPostingFrequency,
         url: url || null,
+        session_id: session
       }),
     });
 

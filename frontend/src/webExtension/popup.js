@@ -469,8 +469,15 @@ function openDashboard() {
   chrome.tabs.create({ url: DASHBOARD_URL, active: true });
 }
 
-function openHistory() {
-  chrome.tabs.create({ url: HISTORY_URL, active: true });
+async function openHistory() {
+  chrome.storage.local.get(['protego_session_id'], function(result) {
+    let session = result.protego_session_id;
+    if (!session) {
+      session = Math.random().toString(36).substring(2, 15);
+      chrome.storage.local.set({ protego_session_id: session });
+    }
+    chrome.tabs.create({ url: HISTORY_URL + "?session_id=" + session, active: true });
+  });
 }
 
 function openSettings() {

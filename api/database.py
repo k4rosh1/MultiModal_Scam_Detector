@@ -55,6 +55,8 @@ def init_db():
             conn.execute("ALTER TABLE detections ADD COLUMN text_hash TEXT")
         if "duplicate_count" not in existing:
             conn.execute("ALTER TABLE detections ADD COLUMN duplicate_count INTEGER DEFAULT 0")
+        if "session_id" not in existing:
+            conn.execute("ALTER TABLE detections ADD COLUMN session_id TEXT")
         conn.commit()
 
 def _make_hash(text: str, platform: str, account_age: float, posting_frequency: float) -> str:
@@ -78,8 +80,8 @@ def save_detection(data: dict, is_mock: bool = False):
         conn.execute("""
             INSERT INTO detections
             (timestamp, platform, text, label, verdict, confidence,
-             scam_prob, legit_prob, account_age, posting_frequency, is_mock, text_hash)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             scam_prob, legit_prob, account_age, posting_frequency, is_mock, text_hash, session_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             datetime.datetime.utcnow().isoformat(),
             config.encrypt(data.get("platform", "unknown")),
@@ -98,6 +100,7 @@ def save_detection(data: dict, is_mock: bool = False):
                 data.get("account_age", 0),
                 data.get("posting_frequency", 0),
             ),
+            data.get("session_id", None)
         ))
         conn.commit()
 

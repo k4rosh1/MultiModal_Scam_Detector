@@ -19,7 +19,23 @@ function extractErrorMessage(errBody, fallback) {
   return fallback;
 }
 
+export function getSessionId() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const urlSession = urlParams.get('session_id');
+  if (urlSession) {
+    localStorage.setItem('protego_session_id', urlSession);
+    return urlSession;
+  }
+  let session = localStorage.getItem('protego_session_id');
+  if (!session) {
+    session = Math.random().toString(36).substring(2, 15);
+    localStorage.setItem('protego_session_id', session);
+  }
+  return session;
+}
+
 export async function predict(payload) {
+  payload.session_id = getSessionId();
   const res = await fetch(`${BASE}/predict`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
@@ -39,9 +55,10 @@ export async function getStats() {
 }
 
 export async function getDetections(limit = 100, platform = null) {
-  const url = platform
-    ? `${BASE}/detections?limit=${limit}&platform=${platform}`
-    : `${BASE}/detections?limit=${limit}`;
+  const sessionId = getSessionId();
+  let url = platform
+    ? `${BASE}/detections?limit=${limit}&platform=${platform}&session_id=${sessionId}`
+    : `${BASE}/detections?limit=${limit}&session_id=${sessionId}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error("Detections fetch failed");
   return res.json();
