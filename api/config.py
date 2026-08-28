@@ -43,18 +43,4 @@ def decrypt(value: str) -> str:
 
 limiter = Limiter(key_func=get_remote_address)
 
-def _load_allowed_origins() -> list:
-    env_path = os.path.join(os.path.dirname(__file__), ".env")
-    if os.path.exists(env_path):
-        with open(env_path) as f:
-            for line in f:
-                line = line.strip()
-                if line.startswith("ALLOWED_ORIGINS="):
-                    raw = line.split("=", 1)[1].strip()
-                    return [o.strip() for o in raw.split(",") if o.strip()]
-    env_val = os.environ.get("ALLOWED_ORIGINS", "")
-    if env_val:
-        return [o.strip() for o in env_val.split(",") if o.strip()]
-    return ["http://localhost:3000"]
-
-ALLOWED_ORIGINS = _load_allowed_origins()
+ALLOWED_ORIGINS = ["*"]
