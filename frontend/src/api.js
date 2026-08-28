@@ -1,4 +1,4 @@
-const BASE = "http://localhost:8000";
+const BASE = "http://3.27.62.146:8000";
 
 // FastAPI returns `detail` as a plain string for simple errors (e.g. HTTPException),
 // but as an ARRAY of {loc, msg, type} objects for Pydantic validator errors (e.g. the

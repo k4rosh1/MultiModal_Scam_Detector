@@ -15,7 +15,7 @@
     "scripting"
   ],
   "host_permissions": [
-    "http://localhost:8000/*",
+    "http://3.27.62.146:8000/*",
     "https://*.facebook.com/*",
     "https://*.twitter.com/*",
     "https://*.x.com/*"

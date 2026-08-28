@@ -1,4 +1,4 @@
-const API_URL = "http://localhost:8000";
+const API_URL = "http://3.27.62.146:8000";
 
 const DEFAULT_SETTINGS = {
   autoDetectEnabled: true,
