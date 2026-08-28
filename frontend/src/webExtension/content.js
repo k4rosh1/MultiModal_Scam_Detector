@@ -179,11 +179,8 @@ async function extractUserMetadata() {
       joinDateText = joinDateEl.innerText?.trim() || null;
     }
     if (!joinDateText) {
-      const headerEl =
-        document.querySelector('[data-testid="UserProfileHeader_Items"]') ||
-        document.body;
-      const headerText = headerEl.innerText || "";
-      const joinMatch = headerText.match(/Joined\s+([A-Za-z]+\s+\d{4}|\d{4})/i);
+      const headerText = document.body.textContent || "";
+      const joinMatch = headerText.match(/Joined\s*([A-Za-z]+\s+\d{4}|\d{4})/i);
       if (joinMatch) joinDateText = joinMatch[0];
     }
 
