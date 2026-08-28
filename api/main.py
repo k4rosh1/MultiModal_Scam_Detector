@@ -32,14 +32,7 @@ app.add_middleware(
 app.include_router(scanner.router)
 app.include_router(system.router)
 
-@app.get("/")
-def root():
-    return {
-        "status": "running",
-        "mock_mode": config.MOCK_MODE,
-        "device": str(config.DEVICE),
-        "docs": "http://3.27.62.146:8000/docs"
-    }
+# (Root JSON route removed so React can serve on /)
 
 # 5. Serve React Frontend (Monolith Mode)
 import os
