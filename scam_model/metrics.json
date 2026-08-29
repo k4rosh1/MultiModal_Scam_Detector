@@ -1,0 +1,14 @@
+{
+    "accuracy": 97.6986301369863,
+    "precision": 95.96928982725528,
+    "recall": 100.0,
+    "f1": 97.94319294809011,
+    "total_samples": 7300,
+    "scam_samples": 4000,
+    "legit_samples": 3300,
+    "true_positives": 4000,
+    "true_negatives": 3132,
+    "false_positives": 168,
+    "false_negatives": 0,
+    "evaluation_date": "Aug 29, 2026 \u2022 12:12 PM"
+}

@@ -68,3 +68,28 @@ def clear_detections():
         conn.execute("DELETE FROM detections")
         conn.commit()
     return {"message": "All detections cleared."}
+
+import os
+import json
+import config
+
+@router.get("/metrics")
+def get_metrics():
+    metrics_path = os.path.join(config.MODEL_DIR, "metrics.json")
+    if os.path.exists(metrics_path):
+        with open(metrics_path, "r") as f:
+            return json.load(f)
+    return {
+        "accuracy": 0.0,
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "total_samples": 0,
+        "scam_samples": 0,
+        "legit_samples": 0,
+        "true_positives": 0,
+        "true_negatives": 0,
+        "false_positives": 0,
+        "false_negatives": 0,
+        "evaluation_date": "N/A"
+    }

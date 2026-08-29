@@ -69,6 +69,18 @@ def main():
     rec  = recall_score(all_labels,    all_preds)
     f1   = f1_score(all_labels,        all_preds)
 
+    # Save False Positives and False Negatives to CSV
+    os.makedirs("./results", exist_ok=True)
+    all_preds_arr = np.array(all_preds)
+    all_labels_arr = np.array(all_labels)
+    
+    fp_indices = np.where((all_preds_arr == 1) & (all_labels_arr == 0))[0]
+    fn_indices = np.where((all_preds_arr == 0) & (all_labels_arr == 1))[0]
+    
+    df.iloc[fp_indices].to_csv("./results/false_positives.csv", index=False)
+    df.iloc[fn_indices].to_csv("./results/false_negatives.csv", index=False)
+    print("   ✅ Exported actual text data for FP/FN to ./results/")
+
     print(f"\n{'='*55}")
     print(f"  FUSED SYSTEM — HARD TEST EVALUATION")
     print(f"{'='*55}")
@@ -82,6 +94,8 @@ def main():
     plt.figure(figsize=(6, 5))
     from sklearn.metrics import confusion_matrix
     cm = confusion_matrix(all_labels, all_preds)
+    tn, fp, fn, tp = cm.ravel()
+    
     sns.heatmap(cm, annot=True, fmt='d', cmap='Reds', xticklabels=["Legit","Scam"], yticklabels=["Legit","Scam"])
     plt.title("Confusion Matrix — Hard Test Set")
     plt.ylabel("True"); plt.xlabel("Predicted")
@@ -89,6 +103,26 @@ def main():
     os.makedirs("./results", exist_ok=True)
     plt.savefig("./results/hard_test_confusion_matrix.png", dpi=150)
     print("   ✅ Confusion matrix saved to ./results/hard_test_confusion_matrix.png")
+
+    import json
+    import datetime
+    metrics = {
+        "accuracy": float(acc * 100),
+        "precision": float(prec * 100),
+        "recall": float(rec * 100),
+        "f1": float(f1 * 100),
+        "total_samples": len(df),
+        "scam_samples": int((df['label'] == 1).sum()),
+        "legit_samples": int((df['label'] == 0).sum()),
+        "true_positives": int(tp),
+        "true_negatives": int(tn),
+        "false_positives": int(fp),
+        "false_negatives": int(fn),
+        "evaluation_date": datetime.datetime.now().strftime("%b %d, %Y • %I:%M %p")
+    }
+    with open("./scam_model/metrics.json", "w") as f:
+        json.dump(metrics, f, indent=4)
+    print("   ✅ Metrics saved to ./scam_model/metrics.json")
 
 if __name__ == "__main__":
     main()

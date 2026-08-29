@@ -55,6 +55,6 @@ def _load_allowed_origins() -> list:
     env_val = os.environ.get("ALLOWED_ORIGINS", "")
     if env_val:
         return [o.strip() for o in env_val.split(",") if o.strip()]
-    return ["http://localhost:3000"]
+    return ["http://localhost:3000", "*"]
 
 ALLOWED_ORIGINS = _load_allowed_origins()

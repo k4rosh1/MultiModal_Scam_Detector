@@ -6,7 +6,6 @@
 .mock-tag    { color: var(--warn); }
 
 .stats-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 20px; }
-@media (max-width: 900px) { .stats-row { grid-template-columns: 1fr 1fr; } }
 
 .stat-card-d {
   background: var(--surface);
@@ -29,8 +28,6 @@
 .stat-sub-d  { font-size: 11px; color: var(--text-muted); margin-top: 6px; }
 
 .charts-row { display: grid; grid-template-columns: 1fr 1fr 2fr; gap: 14px; }
-@media (max-width: 1100px) { .charts-row { grid-template-columns: 1fr 1fr; } .chart-wide { grid-column: 1 / -1; } }
-@media (max-width: 700px)  { .charts-row { grid-template-columns: 1fr; } }
 
 .chart-card  { padding: 18px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); box-shadow: 0 2px 10px rgba(0,0,0,0.25); }
 .chart-title { font-size: 13px; font-weight: 600; color: var(--text-dim); margin-bottom: 14px; }
@@ -43,3 +40,38 @@
 .pie-legend { display: flex; align-items: center; justify-content: center; gap: 6px; margin-top: 10px; font-size: 12px; color: var(--text-dim); }
 .pie-legend-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
 .pie-legend-label { font-weight: 500; }
+
+/* ── Responsive: Large Tablet ── */
+@media (max-width: 1100px) {
+  .charts-row { grid-template-columns: 1fr 1fr; }
+  .chart-wide { grid-column: 1 / -1; }
+}
+
+/* ── Responsive: Tablet ── */
+@media (max-width: 900px) {
+  .stats-row { grid-template-columns: 1fr 1fr; }
+  .page-title { font-size: 20px; }
+  .stat-value-d { font-size: 26px; }
+}
+
+/* ── Responsive: Small Tablet / Large Phone ── */
+@media (max-width: 700px) {
+  .charts-row { grid-template-columns: 1fr; }
+  .page-header { flex-direction: column; align-items: flex-start; }
+  .stat-card-d { padding: 14px 16px; }
+  .stat-value-d { font-size: 24px; }
+  .chart-card { padding: 14px; }
+}
+
+/* ── Responsive: Phone ── */
+@media (max-width: 480px) {
+  .stats-row { grid-template-columns: 1fr; gap: 10px; }
+  .charts-row { gap: 10px; }
+  .page-title { font-size: 18px; }
+  .page-sub { font-size: 12px; }
+  .stat-card-d { padding: 12px 14px; }
+  .stat-value-d { font-size: 22px; }
+  .stat-label-d { font-size: 10px; }
+  .chart-empty { height: 160px; }
+  .dash-loading { height: 40vh; }
+}

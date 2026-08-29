@@ -234,3 +234,52 @@
   from { transform: translateY(20px); opacity: 0; }
   to { transform: translateY(0); opacity: 1; }
 }
+
+/* ── Responsive: Tablet ── */
+@media (max-width: 900px) {
+  .page-title { font-size: 20px; }
+  .controls-row { gap: 8px; }
+  .search-input { width: 180px; }
+  .modal-content { max-width: 480px; }
+  .modal-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; }
+}
+
+/* ── Responsive: Small Tablet / Large Phone ── */
+@media (max-width: 700px) {
+  .page-header { flex-direction: column; align-items: flex-start; gap: 12px; }
+  .controls-row { flex-direction: column; align-items: stretch; gap: 8px; }
+  .search-input { width: 100%; margin-left: 0; }
+  .filter-tabs { justify-content: flex-start; }
+  .det-table thead th { padding: 8px 10px; font-size: 9px; }
+  .det-table td { padding: 8px 10px; font-size: 11px; }
+  .text-cell { max-width: 180px; }
+  .modal-content { width: 95%; max-width: none; }
+  .modal-header { padding: 12px 16px; }
+  .modal-body { padding: 16px; max-height: 65vh; }
+  .modal-grid { grid-template-columns: 1fr 1fr; gap: 8px; }
+  .modal-verdict-banner { padding: 10px; gap: 8px; }
+  .modal-stat-value { font-size: 14px; }
+  .modal-text-box { font-size: 12px; padding: 10px; max-height: 150px; }
+}
+
+/* ── Responsive: Phone ── */
+@media (max-width: 480px) {
+  .page-title { font-size: 18px; }
+  .page-sub { font-size: 12px; }
+  .filter-tab { padding: 4px 10px; font-size: 11px; }
+  .search-input { font-size: 12px; padding: 6px 10px; }
+  .results-count { font-size: 11px; }
+  .det-table thead th { padding: 6px 8px; font-size: 9px; letter-spacing: 0.3px; }
+  .det-table td { padding: 6px 8px; font-size: 10px; }
+  .text-cell { max-width: 140px; font-size: 10px; }
+  .mono-cell { font-size: 10px; }
+  .ts-cell { font-size: 10px; }
+  .mini-bar { width: 36px; height: 4px; }
+  .modal-content { width: 98%; border-radius: 8px; }
+  .modal-grid { grid-template-columns: 1fr; }
+  .modal-title { font-size: 14px; }
+  .modal-stat-label { font-size: 10px; }
+  .modal-stat { padding: 10px; }
+  .table-empty { padding: 40px 16px; font-size: 13px; }
+  .table-error { padding: 30px 16px; font-size: 13px; }
+}

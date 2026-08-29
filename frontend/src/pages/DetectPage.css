@@ -499,3 +499,64 @@
   color: var(--accent);
   margin-bottom: 14px;
 }
+
+/* ── Responsive: Tablet ── */
+@media (max-width: 900px) {
+  .detect-grid { grid-template-columns: 1fr; }
+  .page-title { font-size: 20px; }
+  .page-sub { font-size: 13px; }
+  .header-icon-circle { width: 40px; height: 40px; }
+  .header-icon-circle svg { width: 20px; height: 20px; }
+}
+
+/* ── Responsive: Small Tablet / Large Phone ── */
+@media (max-width: 700px) {
+  .page-header { flex-direction: column; align-items: flex-start; gap: 12px; }
+  .platform-selector { flex-wrap: wrap; gap: 8px; }
+  .plat-btn { flex: 1 1 calc(50% - 4px); min-width: 0; font-size: 12px; padding: 8px; }
+  .input-panel { padding: 16px; gap: 10px; }
+  .result-panel { padding: 16px; gap: 12px; }
+  .result-card { padding: 16px; }
+  .summary-grid { grid-template-columns: 1fr; gap: 6px; }
+  .action-row { flex-direction: column; gap: 8px; }
+  .analyze-btn, .reset-btn { flex: none; width: 100%; }
+  .tab-bar { gap: 16px; }
+  .tab-btn { font-size: 12px; padding: 8px 0; }
+  .result-header { gap: 8px; margin-bottom: 12px; }
+  .result-verdict { font-size: 15px; }
+  .result-icon { font-size: 24px; }
+}
+
+/* ── Responsive: Phone ── */
+@media (max-width: 480px) {
+  .page-title { font-size: 18px; }
+  .page-sub { font-size: 12px; }
+  .header-left { gap: 10px; }
+  .header-icon-circle { width: 36px; height: 36px; }
+  .header-icon-circle svg { width: 18px; height: 18px; }
+  .platform-selector { gap: 6px; }
+  .plat-btn { font-size: 11px; padding: 7px 6px; gap: 4px; }
+  .input-panel { padding: 12px; }
+  .result-panel { padding: 12px; }
+  .post-textarea { font-size: 12px; padding: 8px 10px; }
+  .field-label { font-size: 12px; }
+  .field-input { font-size: 12px; padding: 7px 8px; }
+  .info-box { padding: 8px 10px; }
+  .info-box-header { font-size: 12px; }
+  .info-box-body { font-size: 11px; }
+  .qr-dropzone { min-height: 120px; padding: 14px; }
+  .qr-drop-title { font-size: 13px; }
+  .qr-drop-sub { font-size: 11px; }
+  .qr-preview-img { max-height: 120px; }
+  .result-bars { gap: 8px; }
+  .prob-label { font-size: 11px; }
+  .prob-value { font-size: 11px; }
+  .result-conf { font-size: 11px; }
+  .mock-banner { font-size: 10px; }
+  .duplicate-banner { font-size: 10px; }
+  .placeholder-logo { max-width: 120px; }
+  .placeholder-title { font-size: 16px; }
+  .placeholder-sub { font-size: 12px; }
+  .bullet { font-size: 12px; gap: 8px; }
+  .offline-banner { font-size: 12px; padding: 8px 12px; }
+}

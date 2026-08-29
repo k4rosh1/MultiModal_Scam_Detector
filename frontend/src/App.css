@@ -1,3 +1,7 @@
+html {
+  overflow-y: scroll; /* Prevents scrollbar layout shift (shaking) when changing pages */
+}
+
 .app-wrapper {
   width: 100%;
   min-height: 80vh; /* 100vh / 1.25 zoom = 80vh to perfectly fit screen */
@@ -6,7 +10,9 @@
 }
 
 .navbar {
-  position: relative;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -60,12 +66,14 @@
 
 .nav-link {
   padding: 8px 18px;
+  border: 1px solid transparent;
   border-radius: 20px;
   font-size: 13px;
   font-weight: 600;
   color: var(--text-dim);
   text-decoration: none;
-  transition: all 0.15s;
+  transition: background-color 0.15s, color 0.15s, border-color 0.15s;
+  box-sizing: border-box;
 }
 .nav-link:hover {
   color: var(--text);
@@ -74,6 +82,7 @@
 .nav-link.active {
   color: #fff;
   background: var(--accent);
+  border-color: var(--accent);
 }
 
 .navbar-right {
@@ -149,15 +158,130 @@
   transition: background 0.3s ease;
 }
 
-@media (max-width: 768px) {
+/* ── Responsive: Large Tablet ── */
+@media (max-width: 1100px) {
+  .app-wrapper {
+    zoom: 1.1;
+  }
+  .promo-main {
+    zoom: 1.1;
+  }
+}
+
+/* ── Responsive: Tablet ── */
+@media (max-width: 900px) {
+  .app-wrapper {
+    zoom: 1;
+  }
+  .promo-main {
+    zoom: 1;
+  }
   .navbar {
     padding: 0 16px;
-    gap: 12px;
+    height: 56px;
   }
-  .brand-sub {
+  .navbar-links {
+    position: static;
+    transform: none;
+    gap: 4px;
+  }
+  .nav-link {
+    padding: 6px 12px;
+    font-size: 12px;
+  }
+  .navbar-right {
+    gap: 8px;
+  }
+  .navbar-status span:last-child {
     display: none;
+  }
+  .navbar-status {
+    padding: 6px 8px;
+    min-width: auto;
   }
   .app-main {
     padding: 20px 16px;
+  }
+  .brand-name {
+    font-size: 18px;
+  }
+}
+
+/* ── Responsive: Small Tablet / Large Phone ── */
+@media (max-width: 700px) {
+  .app-wrapper {
+    zoom: 1;
+    min-height: 100vh;
+  }
+  .navbar {
+    flex-wrap: wrap;
+    height: auto;
+    padding: 10px 14px;
+    gap: 8px;
+  }
+  .navbar-left {
+    gap: 16px;
+  }
+  .navbar-links {
+    position: static;
+    transform: none;
+    order: 3;
+    width: 100%;
+    justify-content: center;
+    gap: 4px;
+    padding-top: 6px;
+    border-top: 1px solid var(--border);
+  }
+  .nav-link {
+    padding: 6px 10px;
+    font-size: 11px;
+  }
+  .navbar-right {
+    gap: 6px;
+  }
+  .pill-container {
+    padding: 2px;
+  }
+  .theme-toggle {
+    padding: 3px 6px;
+    font-size: 12px;
+    gap: 4px;
+  }
+  .app-main {
+    padding: 16px 12px;
+  }
+  .brand-name {
+    font-size: 16px;
+  }
+  .dashboard-logo-img {
+    width: 26px;
+    height: 26px;
+  }
+}
+
+/* ── Responsive: Phone ── */
+@media (max-width: 480px) {
+  .navbar {
+    padding: 8px 10px;
+  }
+  .navbar-links {
+    gap: 2px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+  .nav-link {
+    padding: 5px 8px;
+    font-size: 10px;
+  }
+  .app-main {
+    padding: 12px 8px;
+  }
+  .navbar-status {
+    font-size: 10px;
+    padding: 4px 6px;
+  }
+  .status-dot {
+    width: 5px;
+    height: 5px;
   }
 }

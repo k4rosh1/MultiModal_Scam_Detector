@@ -215,7 +215,7 @@ if __name__ == "__main__":
     print(f"Using device: {DEVICE}")
 
     print("\n[1/7] Loading dataset...")
-    df = pd.read_csv("hard_test_dataset.csv")
+    df = pd.read_csv("merged_real_dataset.csv")
     print(f"   Total samples: {len(df)}  |  Scam: {df['label'].sum()}  |  Legit: {(df['label']==0).sum()}")
 
     X_text = df["text"].values

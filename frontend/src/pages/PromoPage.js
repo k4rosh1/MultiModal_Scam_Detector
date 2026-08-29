@@ -51,7 +51,7 @@ export default function PromoPage() {
       {/* Navigation */}
       <nav className="promo-nav">
         <div className="nav-left">
-          <div className="nav-logo" onClick={() => navigate("/")}>
+          <div className="nav-logo" onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}>
             <img src="/logo.png" alt="Protego Logo" className="logo-img" />
             <span className="logo-text">Protego</span>
           </div>

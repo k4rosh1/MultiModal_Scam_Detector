@@ -78,3 +78,9 @@ export async function scanQR(file) {
   }
   return res.json();
 }
+
+export async function getModelMetrics() {
+  const res = await fetch(`${BASE}/metrics`);
+  if (!res.ok) throw new Error("Metrics fetch failed");
+  return res.json();
+}

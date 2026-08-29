@@ -9,6 +9,7 @@ import {
 import DetectPage from "./pages/DetectPage";
 import DashboardPage from "./pages/DashboardPage";
 import HistoryPage from "./pages/HistoryPage";
+import MetricsPage from "./pages/MetricsPage";
 import PromoPage from "./pages/PromoPage";
 import { checkHealth } from "./api";
 import "./App.css";
@@ -57,6 +58,7 @@ function Navbar({ theme, toggleTheme }) {
         <NavLink to="/detect" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>Detect</NavLink>
         <NavLink to="/dashboard" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>Dashboard</NavLink>
         <NavLink to="/history" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>History</NavLink>
+        <NavLink to="/metrics" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>Metrics</NavLink>
       </div>
 
       <div className="navbar-right">
@@ -109,6 +111,7 @@ function AppContent({ theme, toggleTheme }) {
               <Route path="/detect" element={<DetectPage />} />
               <Route path="/dashboard" element={<DashboardPage />} />
               <Route path="/history" element={<HistoryPage />} />
+              <Route path="/metrics" element={<MetricsPage />} />
             </Routes>
           </main>
         </div>

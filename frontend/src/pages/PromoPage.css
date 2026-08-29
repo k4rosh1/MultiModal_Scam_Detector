@@ -755,27 +755,109 @@
   transform: translateY(0);
 }
 
+/* ── Responsive: Large Tablet ── */
+@media (max-width: 1100px) {
+  .promo-container {
+  min-height: 100vh;
+  zoom: 1.2;
+}
+  .extension-grid { grid-template-columns: repeat(2, 1fr); }
+  .footer-grid { grid-template-columns: 1fr 1fr 1fr; gap: 1.5rem; }
+  .footer-brand { grid-column: 1 / -1; }
+  .footer-newsletter { grid-column: 1 / -1; }
+  .hero-section { padding: 3rem 3rem; }
+  .hero-title { font-size: 3rem; }
+}
+
+/* ── Responsive: Tablet ── */
 @media (max-width: 900px) {
+  .promo-container { zoom: 1; }
   .hero-section {
     flex-direction: column;
     padding: 3rem 2rem;
     gap: 3rem;
   }
-  .features-grid, .steps-container, .extension-grid {
-    grid-template-columns: 1fr;
-    flex-direction: column;
-  }
-  .step-arrow {
-    transform: rotate(90deg);
-    margin: 1rem 0;
-  }
-  .footer-grid {
-    grid-template-columns: 1fr;
-  }
-  .promo-nav {
-    padding: 0 2rem;
-  }
-  .nav-links {
-    display: none;
-  }
+  .hero-content { max-width: none; text-align: center; }
+  .hero-title { font-size: 2.8rem; }
+  .hero-stats { display: flex; justify-content: center; gap: 2rem; }
+  .get-started-btn { margin: 0 auto; }
+  .hero-visual { justify-content: center; }
+  .floating-scan-card { right: 0; top: -10px; width: 170px; }
+  .features-grid { grid-template-columns: 1fr 1fr; }
+  .steps-container { flex-direction: column; gap: 1rem; }
+  .step-arrow { transform: rotate(90deg); margin: 0.5rem 0; }
+  .extension-grid { grid-template-columns: repeat(2, 1fr); }
+  .footer-grid { grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .footer-brand { grid-column: 1 / -1; }
+  .footer-newsletter { grid-column: 1 / -1; }
+  .section { padding: 1.5rem 2rem; }
+  .promo-nav { padding: 0 2rem; }
+  .nav-links { display: none; }
+  .promo-footer { padding: 2rem 2rem 1.5rem 2rem; }
+}
+
+/* ── Responsive: Small Tablet / Large Phone ── */
+@media (max-width: 700px) {
+  .hero-section { padding: 2rem 1.5rem; gap: 2rem; }
+  .hero-title { font-size: 2.2rem; }
+  .hero-subtitle { font-size: 0.95rem; }
+  .stat-number { font-size: 1.8rem; }
+  .stat-label { font-size: 0.8rem; }
+  .section { padding: 1.25rem 1.5rem; }
+  .section-title { font-size: 1.6rem; margin-bottom: 1.25rem; }
+  .features-grid { grid-template-columns: 1fr; gap: 1.25rem; }
+  .feature-card { padding: 2rem 1.5rem; }
+  .extension-grid { grid-template-columns: 1fr; }
+  .extension-card { padding: 1.5rem 1.25rem; }
+  .download-card { padding: 2rem 1.5rem; }
+  .install-step-row { padding: 1rem; }
+  .install-text h4 { font-size: 0.85rem; }
+  .install-text p { font-size: 0.8rem; }
+  .footer-grid { grid-template-columns: 1fr; gap: 1.5rem; }
+  .promo-footer { padding: 1.5rem 1.5rem 1rem 1.5rem; }
+  .promo-nav { padding: 0 1.5rem; }
+  .logo-text { font-size: 18px; }
+  .logo-img { width: 28px; height: 28px; }
+  .nav-login-btn { padding: 0.5rem 1rem; font-size: 0.8rem; }
+  .floating-scan-card { display: none; }
+  .laptop-container { max-width: 100%; }
+}
+
+/* ── Responsive: Phone ── */
+@media (max-width: 480px) {
+  .hero-section { padding: 1.5rem 1rem; gap: 1.5rem; }
+  .hero-title { font-size: 1.8rem; letter-spacing: -0.5px; }
+  .hero-badge { font-size: 0.75rem; padding: 0.3rem 0.8rem; }
+  .hero-subtitle { font-size: 0.85rem; margin-bottom: 1rem; }
+  .hero-stats { flex-direction: column; gap: 0.5rem; align-items: center; }
+  .stat-number { font-size: 1.5rem; }
+  .get-started-btn { padding: 0.7rem 1.5rem; font-size: 0.9rem; width: 100%; justify-content: center; }
+  .section { padding: 1rem; }
+  .section-title { font-size: 1.3rem; margin-bottom: 1rem; }
+  .feature-card { padding: 1.5rem 1rem; }
+  .feature-card h3 { font-size: 1rem; }
+  .feature-card p { font-size: 0.8rem; }
+  .feature-icon { width: 44px; height: 44px; }
+  .step-card { padding: 1.5rem; }
+  .step-card h3 { font-size: 0.9rem; }
+  .step-card p { font-size: 0.8rem; }
+  .step-number { width: 26px; height: 26px; font-size: 0.8rem; top: -10px; left: -10px; }
+  .download-card { padding: 1.5rem 1rem; }
+  .download-card h3 { font-size: 1rem; }
+  .download-card p { font-size: 0.85rem; }
+  .dl-icon-circle { width: 48px; height: 48px; }
+  .install-step-row { flex-direction: column; text-align: center; gap: 0.75rem; }
+  .install-num { margin-right: 0; }
+  .install-tag { margin-left: 0; margin-top: 0.5rem; }
+  .newsletter-form { flex-direction: column; }
+  .newsletter-form input { width: 100%; }
+  .newsletter-form button { width: 100%; padding: 0.7rem; }
+  .promo-nav { padding: 0 1rem; height: 54px; }
+  .logo-text { font-size: 16px; }
+  .logo-img { width: 24px; height: 24px; }
+  .nav-login-btn { padding: 0.4rem 0.8rem; font-size: 0.75rem; }
+  .footer-bottom { font-size: 0.7rem; }
+  .footer-col h5 { font-size: 0.9rem; margin-bottom: 1rem; }
+  .footer-col a { font-size: 0.8rem; }
+  .promo-footer { padding: 1.25rem 1rem 0.75rem 1rem; }
 }
