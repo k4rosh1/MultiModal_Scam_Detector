@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Request, UploadFile, File, HTTPException
+from fastapi import APIRouter, Request, UploadFile, File, HTTPException, Form
 import config
 from schemas import PredictRequest
 import qr_utils
@@ -9,7 +9,7 @@ router = APIRouter()
 
 @router.post("/scan-qr")
 @config.limiter.limit("20/minute")
-async def scan_qr(request: Request, file: UploadFile = File(...)):
+async def scan_qr(request: Request, file: UploadFile = File(...), session_id: str = Form(None)):
     allowed_types = {"image/png", "image/jpeg", "image/jpg", "image/webp", "image/bmp", "image/gif"}
     content_type  = (file.content_type or "").lower()
     if content_type not in allowed_types:
@@ -46,7 +46,7 @@ async def scan_qr(request: Request, file: UploadFile = File(...)):
     DEFAULT_AGE  = 365.0
     DEFAULT_FREQ = 1.0
 
-    existing = database.find_duplicate(scan_text, "qr", DEFAULT_AGE, DEFAULT_FREQ)
+    existing = database.find_duplicate(scan_text, "qr", DEFAULT_AGE, DEFAULT_FREQ, session_id)
     if existing:
         return {
             "qr_content":   qr_content,
@@ -87,6 +87,7 @@ async def scan_qr(request: Request, file: UploadFile = File(...)):
         "platform":          "qr",
         "account_age":       DEFAULT_AGE,
         "posting_frequency": DEFAULT_FREQ,
+        "session_id":        session_id,
         **result,
     }, is_mock=config.MOCK_MODE)
 
@@ -107,7 +108,7 @@ async def scan_qr(request: Request, file: UploadFile = File(...)):
 @router.post("/predict")
 @config.limiter.limit("30/minute")
 def predict(req: PredictRequest, request: Request):
-    existing = database.find_duplicate(req.text, req.platform, req.account_age, req.posting_frequency)
+    existing = database.find_duplicate(req.text, req.platform, req.account_age, req.posting_frequency, req.session_id)
     if existing:
         return {
             "label":           existing.get("label", -1),
@@ -119,6 +120,7 @@ def predict(req: PredictRequest, request: Request):
             "is_mock":         bool(existing.get("is_mock", 0)),
             "is_duplicate":    True,
             "duplicate_count": existing.get("duplicate_count", 1),
+            "explanation":     existing.get("explanation", ""),
         }
 
     result = ml_engine.mock_predict(req) if config.MOCK_MODE else ml_engine.real_predict(req)

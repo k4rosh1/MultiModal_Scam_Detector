@@ -16,6 +16,7 @@
   ],
   "host_permissions": [
     "http://localhost:8000/*",
+    "https://protego.duckdns.org/*",
     "https://*.facebook.com/*",
     "https://*.twitter.com/*",
     "https://*.x.com/*"
@@ -38,6 +39,16 @@
         "content.js"
       ],
       "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://protego-scam-shield.vercel.app/*",
+        "http://localhost:3000/*"
+      ],
+      "js": [
+        "sync.js"
+      ],
+      "run_at": "document_start"
     }
   ]
 }

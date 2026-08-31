@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from "react";
-import { getDetections, clearDetections } from "../api";
+import { getDetections } from "../api";
 import "./HistoryPage.css";
 
 const FILTERS = [
   { key: "all", label: "All" },
   { key: "scam", label: " Scam" },
   { key: "legit", label: " Legit" },
+  { key: "uncertain", label: " Uncertain" },
   { key: "facebook", label: " Facebook" },
   { key: "twitter", label: " X (Twitter)" },
 ];
@@ -74,16 +75,7 @@ export default function HistoryPage() {
     load();
   }, []);
 
-  const handleClear = async () => {
-    if (
-      !window.confirm(
-        "Clear all records? This clears ONLY backend records. Extension history will remain.",
-      )
-    )
-      return;
-    await clearDetections();
-    load();
-  };
+  
 
   const filtered = rows.filter((r) => {
     const matchFilter =
@@ -93,11 +85,13 @@ export default function HistoryPage() {
           ? r.label === 1
           : filter === "legit"
             ? r.label === 0
-            : filter === "facebook"
-              ? r.platform === "facebook"
-              : filter === "twitter"
-                ? r.platform === "twitter"
-                : true;
+            : filter === "uncertain"
+              ? r.label === 2
+              : filter === "facebook"
+                ? r.platform === "facebook"
+                : filter === "twitter"
+                  ? r.platform === "twitter"
+                  : true;
     const matchSearch =
       search.trim() === "" ||
       (r.text || "").toLowerCase().includes(search.toLowerCase());
@@ -117,9 +111,7 @@ export default function HistoryPage() {
           <button className="btn btn-ghost" onClick={load}>
             ↻ Refresh
           </button>
-          <button className="btn btn-danger" onClick={handleClear}>
-            Clear All
-          </button>
+          
         </div>
       </div>
 
@@ -182,22 +174,26 @@ export default function HistoryPage() {
             <tbody>
               {filtered.map((r) => {
                 const isScam = r.label === 1;
+                const isUncertain = r.label === 2;
                 const conf = parseFloat(r.confidence) || 0;
                 const ts = r.timestamp
                   ? new Date(r.timestamp).toLocaleString()
                   : "—";
+                const rowClass = isUncertain ? "row-uncertain" : isScam ? "row-scam" : "row-legit";
+                const tagClass = isUncertain ? "tag-uncertain" : isScam ? "tag-scam" : "tag-legit";
+                const tagText = isUncertain ? " Uncertain" : isScam ? " Scam" : " Legit";
                 return (
                   <tr
                     key={r.id}
-                    className={`clickable-row ${isScam ? "row-scam" : "row-legit"}`}
+                    className={`clickable-row ${rowClass}`}
                     onClick={() => setSelectedItem(r)}
                   >
                     <td className="mono-cell">#{r.id}</td>
                     <td>
                       <span
-                        className={`tag ${isScam ? "tag-scam" : "tag-legit"}`}
+                        className={`tag ${tagClass}`}
                       >
-                        {isScam ? " Scam" : " Legit"}
+                        {tagText}
                       </span>
                     </td>
                     <td>
@@ -219,7 +215,7 @@ export default function HistoryPage() {
                       <div className="mini-bar-wrap">
                         <div className="mini-bar">
                           <div
-                            className={`mini-fill ${isScam ? "fill-scam" : "fill-legit"}`}
+                            className={`mini-fill ${isUncertain ? "fill-uncertain" : isScam ? "fill-scam" : "fill-legit"}`}
                             style={{ width: `${conf}%` }}
                           />
                         </div>
@@ -270,24 +266,28 @@ export default function HistoryPage() {
                 className="modal-verdict-banner"
                 style={{
                   backgroundColor:
-                    selectedItem.label === 1
-                      ? "rgba(240, 82, 82, 0.1)"
-                      : "rgba(34, 197, 94, 0.1)",
+                    selectedItem.label === 2
+                      ? "rgba(245, 158, 11, 0.1)"
+                      : selectedItem.label === 1
+                        ? "rgba(240, 82, 82, 0.1)"
+                        : "rgba(34, 197, 94, 0.1)",
                   borderColor:
-                    selectedItem.label === 1 ? "var(--danger)" : "var(--safe)",
+                    selectedItem.label === 2 ? "#f59e0b" : selectedItem.label === 1 ? "var(--danger)" : "var(--safe)",
                 }}
               >
                 <span style={{ fontSize: 24 }}>
-                  {selectedItem.label === 1 ? "🚨" : "✅"}
+                  {selectedItem.label === 2 ? "⚠️" : selectedItem.label === 1 ? "🚨" : "✅"}
                 </span>
                 <div>
                   <div
                     style={{
                       fontWeight: "bold",
                       color:
-                        selectedItem.label === 1
-                          ? "var(--danger)"
-                          : "var(--safe)",
+                        selectedItem.label === 2
+                          ? "#f59e0b"
+                          : selectedItem.label === 1
+                            ? "var(--danger)"
+                            : "var(--safe)",
                     }}
                   >
                     {selectedItem.verdict}

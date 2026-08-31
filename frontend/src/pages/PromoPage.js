@@ -90,8 +90,8 @@ export default function PromoPage() {
 
           <p className="hero-subtitle">
             Taglish scam detection powered by mBERT with early-fusion metadata
-            integration. Instantly analyze Facebook and X posts using text,
-            account age, and posting frequency for accurate scam classification.
+            integration. Specifically designed for Facebook (via manual scanning) 
+            and X/Twitter (via the automatic browser extension).
           </p>
 
           <button className="get-started-btn" onClick={handleGetStarted}>
@@ -246,7 +246,7 @@ export default function PromoPage() {
           <div className="extension-card animate-on-scroll">
             <div className="ext-icon-letter">S</div>
             <h4>Auto-Detect</h4>
-            <p>Automatically scans posts as you browse social media and messaging platforms.</p>
+            <p>Automatically scans posts on X (Twitter) as you browse. (Use the manual detection fallback for Facebook).</p>
             <div className="ext-badges">
               <span className="ext-badge">Facebook</span>
               <span className="ext-badge">X (Twitter)</span>

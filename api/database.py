@@ -55,16 +55,23 @@ def init_db():
             conn.execute("ALTER TABLE detections ADD COLUMN text_hash TEXT")
         if "duplicate_count" not in existing:
             conn.execute("ALTER TABLE detections ADD COLUMN duplicate_count INTEGER DEFAULT 0")
+        if "explanation" not in existing:
+            conn.execute("ALTER TABLE detections ADD COLUMN explanation TEXT DEFAULT ''")
+        if "session_id" not in existing:
+            conn.execute("ALTER TABLE detections ADD COLUMN session_id TEXT")
         conn.commit()
 
 def _make_hash(text: str, platform: str, account_age: float, posting_frequency: float) -> str:
     raw = f"{text.strip().lower()}|{platform}|{round(account_age)}|{round(posting_frequency, 1)}"
     return hashlib.sha256(raw.encode()).hexdigest()
 
-def find_duplicate(text: str, platform: str, account_age: float, posting_frequency: float):
+def find_duplicate(text: str, platform: str, account_age: float, posting_frequency: float, session_id: str = None):
     h = _make_hash(text, platform, account_age, posting_frequency)
     with get_db() as conn:
-        row = conn.execute("SELECT * FROM detections WHERE text_hash=? ORDER BY id DESC LIMIT 1", (h,)).fetchone()
+        if session_id:
+            row = conn.execute("SELECT * FROM detections WHERE text_hash=? AND session_id=? ORDER BY id DESC LIMIT 1", (h, session_id)).fetchone()
+        else:
+            row = conn.execute("SELECT * FROM detections WHERE text_hash=? ORDER BY id DESC LIMIT 1", (h,)).fetchone()
         if row:
             conn.execute("UPDATE detections SET duplicate_count = duplicate_count + 1 WHERE id=?", (row["id"],))
             conn.commit()
@@ -78,8 +85,8 @@ def save_detection(data: dict, is_mock: bool = False):
         conn.execute("""
             INSERT INTO detections
             (timestamp, platform, text, label, verdict, confidence,
-             scam_prob, legit_prob, account_age, posting_frequency, is_mock, text_hash)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+             scam_prob, legit_prob, account_age, posting_frequency, is_mock, text_hash, explanation, session_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
             datetime.datetime.utcnow().isoformat(),
             config.encrypt(data.get("platform", "unknown")),
@@ -98,6 +105,8 @@ def save_detection(data: dict, is_mock: bool = False):
                 data.get("account_age", 0),
                 data.get("posting_frequency", 0),
             ),
+            data.get("explanation", ""),
+            data.get("session_id", None),
         ))
         conn.commit()
 

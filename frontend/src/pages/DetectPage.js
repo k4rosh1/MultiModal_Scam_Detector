@@ -66,11 +66,19 @@ function QRContentTypeBadge({ type }) {
 // ── Result card ───────────────────────────────────────────────────────────────
 function ResultCard({ result }) {
   const isScam = result.label === 1;
+  const isUncertain = result.label === 2;
   const scamW = result.scam_prob;
   const legitW = result.legit_prob;
 
+  const cardClass = isUncertain ? "result-uncertain" : isScam ? "result-scam" : "result-legit";
+  const iconClass = isUncertain ? "icon-uncertain" : isScam ? "icon-scam" : "icon-legit";
+  const icon = isUncertain ? "⚠️" : isScam ? "🚨" : "✅";
+  const verdictText = isUncertain ? "Uncertain / Out of Context" : isScam ? "Scam Detected" : "Looks Legitimate";
+  const tagClass = isUncertain ? "tag-uncertain" : isScam ? "tag-scam" : "tag-legit";
+  const tagText = isUncertain ? "UNCERTAIN" : isScam ? "SCAM" : "LEGIT";
+
   return (
-    <div className={`result-card ${isScam ? "result-scam" : "result-legit"}`}>
+    <div className={`result-card ${cardClass}`}>
       {result.is_mock && (
         <div className="mock-banner">
           🟡 Mock Mode — predictions are simulated
@@ -83,12 +91,12 @@ function ResultCard({ result }) {
         </div>
       )}
       <div className="result-header">
-        <div className={`result-icon ${isScam ? "icon-scam" : "icon-legit"}`}>
-          {isScam ? "🚨" : "✅"}
+        <div className={`result-icon ${iconClass}`}>
+          {icon}
         </div>
         <div>
           <div className="result-verdict">
-            {isScam ? "Scam Detected" : "Looks Legitimate"}
+            {verdictText}
           </div>
           <div className="result-platform">
             {result.platform === "facebook"
@@ -100,10 +108,28 @@ function ResultCard({ result }) {
                   : result.platform}
           </div>
         </div>
-        <span className={`tag ${isScam ? "tag-scam" : "tag-legit"}`}>
-          {isScam ? "SCAM" : "LEGIT"}
+        <span className={`tag ${tagClass}`}>
+          {tagText}
         </span>
       </div>
+
+      {result.explanation && (
+        <div className="explanation-banner" style={{
+          padding: "12px 16px",
+          margin: "12px 0",
+          borderRadius: "8px",
+          backgroundColor: isUncertain ? "rgba(245, 158, 11, 0.1)" : isScam ? "rgba(240, 82, 82, 0.08)" : "rgba(34, 197, 94, 0.08)",
+          borderLeft: `4px solid ${isUncertain ? "#f59e0b" : isScam ? "var(--danger)" : "var(--safe)"}`,
+          fontSize: "13px",
+          lineHeight: "1.5",
+          color: "var(--text-primary)",
+        }}>
+          <strong style={{ display: "block", marginBottom: "4px", color: isUncertain ? "#f59e0b" : isScam ? "var(--danger)" : "var(--safe)" }}>
+            {isUncertain ? "⚠️ Why Uncertain?" : isScam ? "🔍 Why Scam?" : "🔍 Why Legitimate?"}
+          </strong>
+          {result.explanation}
+        </div>
+      )}
 
       <div className="result-bars">
         <div className="prob-row">
@@ -339,7 +365,7 @@ export default function DetectPage() {
   const [online, setOnline] = useState(null);
   const [tab, setTab] = useState("text");
   // platform mode: 'facebook' | 'twitter' | 'qr'
-  const [mode, setMode] = useState("facebook");
+  const [mode, setMode] = useState("social_media");
 
   useEffect(() => {
     checkHealth().then((ok) => setOnline(ok));
@@ -367,7 +393,7 @@ export default function DetectPage() {
     try {
       const res = await predict({
         text: text.trim(),
-        platform: mode,
+        platform: mode === "qr" ? "qr" : meta.platform,
         account_age: meta.account_age,
         posting_frequency: meta.posting_frequency,
       });
@@ -447,28 +473,16 @@ export default function DetectPage() {
           {/* Platform / Mode selector */}
           <div className="platform-selector">
             <button
-              className={`plat-btn ${mode === "facebook" ? "plat-active" : ""}`}
+              className={`plat-btn ${mode === "social_media" ? "plat-active" : ""}`}
               onClick={() => {
-                setMode("facebook");
-                setMeta((p) => ({ ...p, platform: "facebook" }));
+                setMode("social_media");
+                setMeta((p) => ({ ...p, platform: "social_media" }));
                 setResult(null);
                 setError("");
               }}
             >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3.61l.39-4H14V7a1 1 0 0 1 1-1h3z"></path></svg>
-              Facebook
-            </button>
-            <button
-              className={`plat-btn ${mode === "twitter" ? "plat-active" : ""}`}
-              onClick={() => {
-                setMode("twitter");
-                setMeta((p) => ({ ...p, platform: "twitter" }));
-                setResult(null);
-                setError("");
-              }}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="4" y1="4" x2="20" y2="20"></line><line x1="20" y1="4" x2="4" y2="20"></line></svg>
-              X (Twitter)
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
+              Social Media
             </button>
             <button
               className={`plat-btn ${mode === "qr" ? "plat-active" : ""}`}
@@ -526,12 +540,22 @@ export default function DetectPage() {
                     Post / Caption Text
                     <span className="field-hint"> — Taglish supported</span>
                   </label>
+                  <div style={{ marginBottom: "12px", display: "flex", gap: "10px", alignItems: "center" }}>
+                    <label style={{ fontWeight: 500 }}>Select Platform:</label>
+                    <select 
+                      className="form-select" 
+                      style={{ padding: "6px 12px", borderRadius: "6px", border: "1px solid #ccc", outline: "none", fontSize: "14px" }}
+                      value={meta.platform}
+                      onChange={(e) => setMeta({ ...meta, platform: e.target.value })}
+                    >
+                      <option value="facebook">Facebook</option>
+                      <option value="twitter">X (Twitter)</option>
+                    </select>
+                  </div>
                   <textarea
                     className="post-textarea"
                     placeholder={
-                      mode === "facebook"
-                        ? "Paste a Facebook post here..."
-                        : "Paste a tweet here..."
+                      "Paste a social media post here..."
                     }
                     value={text}
                     onChange={(e) => setText(e.target.value)}
@@ -679,7 +703,7 @@ export default function DetectPage() {
                     {[
                       {
                         label: "Platform",
-                        value: mode === "facebook" ? "Facebook" : "X",
+                          value: meta.platform === "facebook" ? "Facebook" : "X (Twitter)",
                       },
                       { label: "Joined Date", value: joinedDate },
                       { label: "Acct Age", value: `${meta.account_age} days` },

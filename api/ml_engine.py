@@ -88,6 +88,14 @@ def mock_predict(req: PredictRequest) -> dict:
         "is_mock":    True,
     }
 
+UNCERTAIN_THRESHOLD = 75.0  # Below this confidence → Uncertain / Out of Context
+
+UNCERTAIN_EXPLANATION = (
+    "The AI model is not confident enough to classify this text as either a scam or legitimate. "
+    "This usually means the input does not match typical social media post patterns found in the training data. "
+    "The text may be out of context, too short, or unrelated to online scam content."
+)
+
 def real_predict(req: PredictRequest) -> dict:
     enc = tokenizer(req.text, max_length=config.MAX_LEN, padding='max_length', truncation=True, return_tensors='pt')
     input_ids      = enc['input_ids'].to(config.DEVICE)
@@ -102,14 +110,29 @@ def real_predict(req: PredictRequest) -> dict:
     confidence = probs[label].item() * 100
     scam_prob  = probs[1].item() * 100
     legit_prob = probs[0].item() * 100
+
+    # Fallout detection: if confidence is below threshold, mark as uncertain
+    if confidence < UNCERTAIN_THRESHOLD:
+        return {
+            "label":       2,
+            "verdict":     "UNCERTAIN",
+            "confidence":  f"{confidence:.1f}%",
+            "scam_prob":   f"{scam_prob:.1f}%",
+            "legit_prob":  f"{legit_prob:.1f}%",
+            "platform":    req.platform,
+            "is_mock":     False,
+            "explanation": UNCERTAIN_EXPLANATION,
+        }
+
     return {
-        "label":      label,
-        "verdict":    "SCAM" if label == 1 else "LEGITIMATE",
-        "confidence": f"{confidence:.1f}%",
-        "scam_prob":  f"{scam_prob:.1f}%",
-        "legit_prob": f"{legit_prob:.1f}%",
-        "platform":   req.platform,
-        "is_mock":    False,
+        "label":       label,
+        "verdict":     "SCAM" if label == 1 else "LEGITIMATE",
+        "confidence":  f"{confidence:.1f}%",
+        "scam_prob":   f"{scam_prob:.1f}%",
+        "legit_prob":  f"{legit_prob:.1f}%",
+        "platform":    req.platform,
+        "is_mock":     False,
+        "explanation": "The text contains strong indicators of a scam based on language patterns and metadata analysis." if label == 1 else "The text appears to be a normal, legitimate social media post with no significant scam indicators detected.",
     }
 
 def real_predict_text_only(text: str, platform: str = "qr") -> dict:
@@ -123,13 +146,28 @@ def real_predict_text_only(text: str, platform: str = "qr") -> dict:
     confidence = probs[label].item() * 100
     scam_prob  = probs[1].item() * 100
     legit_prob = probs[0].item() * 100
+
+    if confidence < UNCERTAIN_THRESHOLD:
+        return {
+            "label":       2,
+            "verdict":     "UNCERTAIN",
+            "confidence":  f"{confidence:.1f}%",
+            "scam_prob":   f"{scam_prob:.1f}%",
+            "legit_prob":  f"{legit_prob:.1f}%",
+            "platform":    platform,
+            "is_mock":     False,
+            "model_used":  "text_only",
+            "explanation": UNCERTAIN_EXPLANATION,
+        }
+
     return {
-        "label":      label,
-        "verdict":    "SCAM" if label == 1 else "LEGITIMATE",
-        "confidence": f"{confidence:.1f}%",
-        "scam_prob":  f"{scam_prob:.1f}%",
-        "legit_prob": f"{legit_prob:.1f}%",
-        "platform":   platform,
-        "is_mock":    False,
-        "model_used": "text_only",
+        "label":       label,
+        "verdict":     "SCAM" if label == 1 else "LEGITIMATE",
+        "confidence":  f"{confidence:.1f}%",
+        "scam_prob":   f"{scam_prob:.1f}%",
+        "legit_prob":  f"{legit_prob:.1f}%",
+        "platform":    platform,
+        "is_mock":     False,
+        "model_used":  "text_only",
+        "explanation": "The text contains strong indicators of a scam based on language patterns and metadata analysis." if label == 1 else "The text appears to be a normal, legitimate social media post with no significant scam indicators detected.",
     }

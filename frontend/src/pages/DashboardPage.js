@@ -10,8 +10,9 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { getStats, getDetections, clearDetections } from "../api";
+import { getStats, getDetections } from "../api";
 import "./DashboardPage.css";
+import HistoryPage from "./HistoryPage";
 
 // ── Visibility-aware polling hook ─────────────────────────────────────────────
 // Pauses the interval when the tab is hidden (user switched tabs or minimized).
@@ -75,11 +76,7 @@ export default function DashboardPage() {
   // Poll every 15s — but pause when tab is hidden
   useVisibilityPolling(load, 15000);
 
-  const handleClear = async () => {
-    if (!window.confirm("Clear all detection records?")) return;
-    await clearDetections();
-    load();
-  };
+  
 
   const pieData = stats
     ? [
@@ -179,9 +176,7 @@ export default function DashboardPage() {
           <button className="btn btn-ghost" onClick={load}>
             ↻ Refresh
           </button>
-          <button className="btn btn-danger" onClick={handleClear}>
-            Clear All
-          </button>
+          
         </div>
       </div>
 
@@ -306,6 +301,10 @@ export default function DashboardPage() {
             </ResponsiveContainer>
           )}
         </div>
+      </div>
+
+      <div style={{ marginTop: "2rem" }}>
+        <HistoryPage />
       </div>
     </div>
   );

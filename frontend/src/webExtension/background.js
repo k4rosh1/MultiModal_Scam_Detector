@@ -1,4 +1,4 @@
-const API_URL = "http://localhost:8000";
+const API_URL = "https://protego.duckdns.org";
 
 const DEFAULT_SETTINGS = {
   autoDetectEnabled: true,
@@ -80,6 +80,16 @@ chrome.runtime.onInstalled.addListener(async () => {
   const history = await chrome.storage.local.get(["detectionHistory"]);
   if (!history.detectionHistory) {
     await chrome.storage.local.set({ detectionHistory: [] });
+  }
+
+  // Generate a unique session_id if one doesn't exist yet
+  const sessionData = await chrome.storage.local.get(["session_id"]);
+  if (!sessionData.session_id) {
+    const sessionId = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 15);
+    await chrome.storage.local.set({ session_id: sessionId });
+    console.log("🔑 Generated new session_id:", sessionId);
+  } else {
+    console.log("🔑 Existing session_id:", sessionData.session_id);
   }
 
   console.log(
@@ -189,6 +199,10 @@ async function detectScam(
   }
 
   try {
+    // Get session_id from extension storage
+    const sessionData = await chrome.storage.local.get(["session_id"]);
+    const sessionId = sessionData.session_id || null;
+
     console.log(
       `📤 Calling API for ${platform}... (account_age=${resolvedAccountAge}, posting_frequency=${resolvedPostingFrequency})`,
     );
@@ -201,6 +215,7 @@ async function detectScam(
         account_age: resolvedAccountAge,
         posting_frequency: resolvedPostingFrequency,
         url: url || null,
+        session_id: sessionId,
       }),
     });
 
@@ -229,7 +244,9 @@ async function detectScam(
 
 async function getStats() {
   try {
-    const response = await fetch(`${API_URL}/stats`);
+    const sessionData = await chrome.storage.local.get(["session_id"]);
+    const sessionId = sessionData.session_id || "";
+    const response = await fetch(`${API_URL}/stats?session_id=${sessionId}`);
     if (!response.ok) throw new Error("Failed to fetch stats");
     return await response.json();
   } catch (error) {

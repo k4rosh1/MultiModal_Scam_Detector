@@ -288,6 +288,7 @@
 }
 .result-scam  { border-left: 4px solid var(--danger); }
 .result-legit { border-left: 4px solid var(--safe); }
+.result-uncertain { border-left: 4px solid #f59e0b; }
 
 .mock-banner {
   background: rgba(245, 158, 11, 0.1);

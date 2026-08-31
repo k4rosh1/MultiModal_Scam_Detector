@@ -6,6 +6,7 @@ class PredictRequest(BaseModel):
     platform:          Optional[str]   = "facebook"
     account_age:       Optional[float] = 365.0
     posting_frequency: Optional[float] = 1.0
+    session_id:        Optional[str]   = None
 
     @validator("text")
     def text_must_not_be_empty(cls, v):

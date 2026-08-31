@@ -57,7 +57,6 @@ function Navbar({ theme, toggleTheme }) {
       <div className="navbar-links">
         <NavLink to="/detect" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>Detect</NavLink>
         <NavLink to="/dashboard" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>Dashboard</NavLink>
-        <NavLink to="/history" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>History</NavLink>
         <NavLink to="/metrics" className={({ isActive }) => isActive ? "nav-link active" : "nav-link"}>Metrics</NavLink>
       </div>
 
@@ -110,7 +109,6 @@ function AppContent({ theme, toggleTheme }) {
             <Routes>
               <Route path="/detect" element={<DetectPage />} />
               <Route path="/dashboard" element={<DashboardPage />} />
-              <Route path="/history" element={<HistoryPage />} />
               <Route path="/metrics" element={<MetricsPage />} />
             </Routes>
           </main>
