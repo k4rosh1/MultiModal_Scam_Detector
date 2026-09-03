@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { getDetections, getArchives, getArchiveDownloadUrl } from "../api";
+import { getDetections, getArchives, getArchiveDownloadUrl, getStats } from "../api";
 import "./HistoryPage.css";
 
 const FILTERS = [
@@ -49,6 +49,7 @@ export default function HistoryPage() {
   const [selectedItem, setSelectedItem] = useState(null); // NEW: Tracks clicked row
 
   const [archives, setArchives] = useState([]);
+  const [totalDetections, setTotalDetections] = useState(0);
 
   const [page, setPage] = useState(1);
 
@@ -57,10 +58,11 @@ export default function HistoryPage() {
     try {
       // Get both backend and extension data
       const offset = (page - 1) * 100;
-      const [backendData, extensionData, archivesData] = await Promise.all([
+      const [backendData, extensionData, archivesData, stats] = await Promise.all([
         getDetections(100, null, offset).catch(() => []),
         page === 1 ? getExtensionHistory().catch(() => []) : Promise.resolve([]),
         page === 1 ? getArchives().catch(() => []) : Promise.resolve(archives),
+        getStats().catch(() => ({ total_detections: 0 })),
       ]);
 
       // Merge and sort by ID (newest first)
@@ -68,6 +70,7 @@ export default function HistoryPage() {
       allData.sort((a, b) => (b.id || 0) - (a.id || 0));
 
       setRows(allData);
+      setTotalDetections(stats.total_detections || 0);
       if (page === 1) setArchives(archivesData);
       setError("");
     } catch (err) {
@@ -184,7 +187,7 @@ export default function HistoryPage() {
       </div>
 
       <div className="results-count">
-        Showing <strong>{filtered.length}</strong> of {rows.length} detections
+        Showing <strong>{filtered.length > 0 ? `${(page - 1) * 100 + 1}-${(page - 1) * 100 + filtered.length}` : 0}</strong> of <strong>{totalDetections || rows.length}</strong> total detections
       </div>
 
       {loading ? (
