@@ -41,7 +41,7 @@ async function getExtensionHistory() {
 }
 
 export default function HistoryPage() {
-  const [rows, setRows] = useState([]);
+  const [allData, setAllData] = useState([]);
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
@@ -56,22 +56,21 @@ export default function HistoryPage() {
   const load = async () => {
     setLoading(true);
     try {
-      // Get both backend and extension data
-      const offset = (page - 1) * 100;
+      // Fetch all active scans for pure client-side pagination and filtering
       const [backendData, extensionData, archivesData, stats] = await Promise.all([
-        getDetections(100, null, offset).catch(() => []),
-        page === 1 ? getExtensionHistory().catch(() => []) : Promise.resolve([]),
-        page === 1 ? getArchives().catch(() => []) : Promise.resolve(archives),
+        getDetections(1000, null, 0).catch(() => []),
+        getExtensionHistory().catch(() => []),
+        getArchives().catch(() => []),
         getStats().catch(() => ({ total_detections: 0 })),
       ]);
 
       // Merge and sort by ID (newest first)
-      const allData = [...backendData, ...extensionData];
-      allData.sort((a, b) => (b.id || 0) - (a.id || 0));
+      const merged = [...backendData, ...extensionData];
+      merged.sort((a, b) => (b.id || 0) - (a.id || 0));
 
-      setRows(allData);
-      setTotalDetections(stats.total_detections || 0);
-      if (page === 1) setArchives(archivesData);
+      setAllData(merged);
+      setArchives(archivesData);
+      setTotalDetections(stats.total_detections || merged.length);
       setError("");
     } catch (err) {
       console.error("Failed to load history:", err);
@@ -83,11 +82,11 @@ export default function HistoryPage() {
 
   useEffect(() => {
     load();
-  }, [page]);
+  }, []);
 
   
 
-  const filtered = rows.filter((r) => {
+  const filtered = allData.filter((r) => {
     const matchFilter =
       filter === "all"
         ? true
@@ -108,16 +107,21 @@ export default function HistoryPage() {
     return matchFilter && matchSearch;
   });
 
+  // Reset to page 1 when search or filter changes
+  useEffect(() => {
+    setPage(1);
+  }, [filter, search]);
+
+  const limit = 100;
+  const totalPages = Math.ceil(filtered.length / limit);
+  const currentPageRows = filtered.slice((page - 1) * limit, page * limit);
+
   const downloadCSV = async () => {
-    if (totalDetections === 0) {
+    if (allData.length === 0) {
       alert("No data to archive.");
       return;
     }
     
-    // Fetch all active scans up to the 1000 cap for the manual export
-    const allData = await getDetections(1000, null, 0).catch(() => []);
-    if (allData.length === 0) return;
-
     const headers = ["ID", "Verdict", "Platform", "Confidence", "Scam Prob", "Legit Prob", "Timestamp", "Text"];
     const csvRows = allData.map(r => {
       const safeText = (r.text || "").replace(/"/g, '""');
@@ -192,9 +196,8 @@ export default function HistoryPage() {
       </div>
 
       <div className="results-count">
-        Showing <strong>{filtered.length > 0 ? `${(page - 1) * 100 + 1}-${(page - 1) * 100 + filtered.length}` : 0}</strong> of <strong>{totalDetections || rows.length}</strong> total detections
+        Showing <strong>{filtered.length > 0 ? `${(page - 1) * limit + 1}-${Math.min(page * limit, filtered.length)}` : 0}</strong> of <strong>{filtered.length}</strong> matching detections
       </div>
-
       {loading ? (
         <div className="table-loading">
           <div className="big-spinner-h" />
@@ -213,21 +216,34 @@ export default function HistoryPage() {
         </div>
       ) : (
         <div className="table-wrap card">
-          <table className="det-table">
-            <thead>
-              <tr>
-                <th>ID</th>
-                <th>Verdict</th>
-                <th>Platform</th>
-                <th>Post Text</th>
-                <th>Confidence</th>
-                <th>Scam %</th>
-                <th>Legit %</th>
-                <th>Timestamp</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map((r) => {
+        <div className="table-header">
+          <span style={{ color: "var(--text-dim)" }}>
+            Showing <strong>{filtered.length > 0 ? `${(page - 1) * limit + 1}-${Math.min(page * limit, filtered.length)}` : 0}</strong> of <strong>{filtered.length}</strong> matching detections
+          </span>
+          <div style={{ display: "flex", gap: "10px" }}>
+            <div className="legend-item">
+              <span className="legend-dot fill-scam"></span> Scam
+            </div>
+            <div className="legend-item">
+              <span className="legend-dot fill-legit"></span> Legit
+            </div>
+          </div>
+        </div>
+        <table className="det-table">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Verdict</th>
+              <th>Platform</th>
+              <th style={{ width: "40%" }}>Post Text</th>
+              <th>Confidence</th>
+              <th>Scam %</th>
+              <th>Legit %</th>
+              <th>Timestamp</th>
+            </tr>
+          </thead>
+          <tbody>
+            {currentPageRows.map((r) => {
                 const isScam = r.label === 1;
                 const isUncertain = r.label === 2;
                 const conf = parseFloat(r.confidence) || 0;
@@ -308,11 +324,11 @@ export default function HistoryPage() {
         >
           &larr; Previous Page
         </button>
-        <span style={{ fontSize: 14 }}>Page {page}</span>
+        <span style={{ fontSize: 14 }}>Page {page} of {Math.max(1, totalPages)}</span>
         <button 
           className="btn" 
           onClick={() => setPage(p => p + 1)}
-          disabled={rows.length < 100} // Basic check: if we got less than limit, no more pages
+          disabled={page >= totalPages}
         >
           Next Page &rarr;
         </button>
