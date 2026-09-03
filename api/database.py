@@ -110,6 +110,19 @@ def save_detection(data: dict, is_mock: bool = False):
         ))
         conn.commit()
 
+        # Enforce 1000-scan retention limit per session to save cloud database space
+        session_id = data.get("session_id", None)
+        if session_id:
+            conn.execute("""
+                DELETE FROM detections 
+                WHERE id NOT IN (
+                    SELECT id FROM detections 
+                    WHERE session_id = ? 
+                    ORDER BY id DESC 
+                    LIMIT 1000
+                ) AND session_id = ?
+            """, (session_id, session_id))
+            conn.commit()
 def decrypt_row(row: dict) -> dict:
     row["text"]     = config.decrypt(row.get("text",     ""))
     row["platform"] = config.decrypt(row.get("platform", ""))

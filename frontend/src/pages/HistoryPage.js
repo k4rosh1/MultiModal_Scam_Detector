@@ -98,6 +98,36 @@ export default function HistoryPage() {
     return matchFilter && matchSearch;
   });
 
+  const downloadCSV = () => {
+    if (!rows || rows.length === 0) {
+      alert("No data to archive.");
+      return;
+    }
+    const headers = ["ID", "Verdict", "Platform", "Confidence", "Scam Prob", "Legit Prob", "Timestamp", "Text"];
+    const csvRows = rows.map(r => {
+      const safeText = (r.text || "").replace(/"/g, '""');
+      return [
+        r.id,
+        r.verdict,
+        r.platform,
+        `${parseFloat(r.confidence || 0).toFixed(1)}%`,
+        `${parseFloat(r.scam_prob || 0).toFixed(1)}%`,
+        `${parseFloat(r.legit_prob || 0).toFixed(1)}%`,
+        r.timestamp ? new Date(r.timestamp).toISOString() : "",
+        `"${safeText}"`
+      ].join(",");
+    });
+    
+    const blob = new Blob([[headers.join(","), ...csvRows].join("\n")], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `protego_scans_archive_${new Date().toISOString().slice(0,10)}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="history-page">
       <div className="page-header">
@@ -111,15 +141,17 @@ export default function HistoryPage() {
           <div>
             <h1 className="page-title" style={{ margin: '0 0 4px 0' }}>Detection History</h1>
             <p className="page-sub" style={{ margin: 0 }}>
-              All past detections — from manual input and browser extension
+              All past detections — cloud capacity is strictly capped at 1,000 to save space.
             </p>
           </div>
         </div>
         <div style={{ display: "flex", gap: 10 }}>
+          <button className="btn" style={{background: 'var(--accent)', color: '#fff'}} onClick={downloadCSV}>
+            💾 Download Archive (CSV)
+          </button>
           <button className="btn btn-ghost" onClick={load}>
             ↻ Refresh
           </button>
-          
         </div>
       </div>
 
