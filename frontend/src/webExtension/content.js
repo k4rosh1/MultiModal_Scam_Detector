@@ -395,31 +395,31 @@ function highlightPost(element, result, text) {
   element.style.paddingLeft = "10px";
 
   if (!element.querySelector(".protego-badge")) {
-    // The badge must NEVER be inserted into the post's actual content flow
-    // (no prepend/append into the real text) — that's what was pushing into
-    // and covering the post's own text. Instead, position it as an absolute
-    // overlay in the corner, layered on top without affecting document flow.
     const computedPosition = window.getComputedStyle(element).position;
     if (computedPosition === "static") {
       element.style.position = "relative";
     }
+    
+    // Create physical space at the top of the text block so the absolute badge
+    // mathematically cannot cover the post's text.
+    element.style.marginTop = "24px";
 
     const badge = document.createElement("span");
     badge.className = "protego-badge";
     badge.textContent = "⚠️ SCAM";
     badge.style.cssText = `
       position: absolute;
-      top: -10px;
-      right: 8px;
+      top: -24px;
+      right: 0px;
       z-index: 2147483647;
       display: inline-block;
       background: #f05252;
       color: white;
-      font-size: 10px;
-      font-weight: 600;
-      padding: 3px 9px;
+      font-size: 11px;
+      font-weight: bold;
+      padding: 4px 8px;
       border-radius: 4px;
-      box-shadow: 0 1px 4px rgba(0,0,0,0.35);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.3);
       cursor: pointer;
       pointer-events: auto;
     `;
@@ -442,6 +442,7 @@ function clearHighlights() {
       el.style.borderLeft = "";
       el.style.backgroundColor = "";
       el.style.paddingLeft = "";
+      el.style.marginTop = "";
     });
 }
 
