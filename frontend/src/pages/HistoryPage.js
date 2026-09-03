@@ -216,19 +216,6 @@ export default function HistoryPage() {
         </div>
       ) : (
         <div className="table-wrap card">
-        <div className="table-header">
-          <span style={{ color: "var(--text-dim)" }}>
-            Showing <strong>{filtered.length > 0 ? `${(page - 1) * limit + 1}-${Math.min(page * limit, filtered.length)}` : 0}</strong> of <strong>{filtered.length}</strong> matching detections
-          </span>
-          <div style={{ display: "flex", gap: "10px" }}>
-            <div className="legend-item">
-              <span className="legend-dot fill-scam"></span> Scam
-            </div>
-            <div className="legend-item">
-              <span className="legend-dot fill-legit"></span> Legit
-            </div>
-          </div>
-        </div>
         <table className="det-table">
           <thead>
             <tr>
