@@ -5,6 +5,14 @@ import numpy as np
 import config
 from schemas import PredictRequest
 
+UNCERTAIN_THRESHOLD = 75.0  # Below this confidence -> Uncertain / Out of Context
+
+UNCERTAIN_EXPLANATION = (
+    "The AI model is not confident enough to classify this text as either a scam or legitimate. "
+    "This usually means the input does not match typical social media post patterns found in the training data. "
+    "The text may be out of context, too short, or unrelated to online scam content."
+)
+
 class EarlyFusionScamDetector(nn.Module):
     def __init__(self, bert_model_name):
         super().__init__()
@@ -66,6 +74,19 @@ if not config.MOCK_MODE:
             text_only_model = None
 
 def mock_predict(req: PredictRequest) -> dict:
+    if "TEST_UNCERTAIN" in req.text:
+        return {
+            "label":       2,
+            "verdict":     "UNCERTAIN",
+            "confidence":  "50.0%",
+            "scam_prob":   "50.0%",
+            "legit_prob":  "50.0%",
+            "platform":    req.platform,
+            "is_mock":     True,
+            "model_used":  "mock",
+            "explanation": UNCERTAIN_EXPLANATION,
+        }
+
     text  = req.text.lower()
     score = 0
     scam_keywords = ["kumita", "pesos", "₱", "gcash", "dm mo", "libre", "free", "promo", "raffle", "invest", "click", "bit.ly", "tinyurl", "congratulations", "nanalo", "limited", "urgent", "verify"]
@@ -88,13 +109,6 @@ def mock_predict(req: PredictRequest) -> dict:
         "is_mock":    True,
     }
 
-UNCERTAIN_THRESHOLD = 75.0  # Below this confidence → Uncertain / Out of Context
-
-UNCERTAIN_EXPLANATION = (
-    "The AI model is not confident enough to classify this text as either a scam or legitimate. "
-    "This usually means the input does not match typical social media post patterns found in the training data. "
-    "The text may be out of context, too short, or unrelated to online scam content."
-)
 
 def real_predict_early_fusion(text: str, account_age: float, posting_frequency: float, platform: str) -> dict:
     if "TEST_UNCERTAIN" in text:
