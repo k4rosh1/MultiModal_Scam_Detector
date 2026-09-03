@@ -17,12 +17,12 @@ def health():
 @router.get("/detections")
 @config.limiter.limit("60/minute")
 def get_detections(request: Request, limit: int = 100, platform: Optional[str] = None, session_id: Optional[str] = None):
+    if not session_id:
+        return []
+
     with database.get_db() as conn:
-        query = "SELECT * FROM detections"
-        params = []
-        if session_id:
-            query += " WHERE session_id = ?"
-            params.append(session_id)
+        query = "SELECT * FROM detections WHERE session_id = ?"
+        params = [session_id]
         
         query += " ORDER BY id DESC LIMIT 500"
         rows = conn.execute(query, params).fetchall()
@@ -36,29 +36,26 @@ def get_detections(request: Request, limit: int = 100, platform: Optional[str] =
 @router.get("/stats")
 @config.limiter.limit("60/minute")
 def get_stats(request: Request, session_id: Optional[str] = None):
+    if not session_id:
+        return {
+            "total_detections": 0, "scam_count": 0, "legit_count": 0,
+            "scam_rate": "0%", "facebook_total": 0, "twitter_total": 0,
+            "detections_today": 0, "mock_mode": config.MOCK_MODE
+        }
+
     today = datetime.date.today().isoformat()
     with database.get_db() as conn:
-        if session_id:
-            row = conn.execute("""
-                SELECT
-                    COUNT(*)                                      AS total,
-                    SUM(CASE WHEN label=1 THEN 1 ELSE 0 END)     AS scam,
-                    SUM(CASE WHEN label=0 THEN 1 ELSE 0 END)     AS legit,
-                    SUM(CASE WHEN timestamp LIKE ? THEN 1 ELSE 0 END) AS today_ct
-                FROM detections
-                WHERE session_id = ?
-            """, (f"{today}%", session_id)).fetchone()
-            all_rows = conn.execute("SELECT platform FROM detections WHERE session_id = ?", (session_id,)).fetchall()
-        else:
-            row = conn.execute("""
-                SELECT
-                    COUNT(*)                                      AS total,
-                    SUM(CASE WHEN label=1 THEN 1 ELSE 0 END)     AS scam,
-                    SUM(CASE WHEN label=0 THEN 1 ELSE 0 END)     AS legit,
-                    SUM(CASE WHEN timestamp LIKE ? THEN 1 ELSE 0 END) AS today_ct
-                FROM detections
-            """, (f"{today}%",)).fetchone()
-            all_rows = conn.execute("SELECT platform FROM detections").fetchall()
+        row = conn.execute("""
+            SELECT
+                COUNT(*)                                      AS total,
+                SUM(CASE WHEN label=1 THEN 1 ELSE 0 END)     AS scam,
+                SUM(CASE WHEN label=0 THEN 1 ELSE 0 END)     AS legit,
+                SUM(CASE WHEN timestamp LIKE ? THEN 1 ELSE 0 END) AS today_ct
+            FROM detections
+            WHERE session_id = ?
+        """, (f"{today}%", session_id)).fetchone()
+        
+        all_rows = conn.execute("SELECT platform FROM detections WHERE session_id = ?", (session_id,)).fetchall()
         
         total    = row["total"]    or 0
         scam     = row["scam"]     or 0
