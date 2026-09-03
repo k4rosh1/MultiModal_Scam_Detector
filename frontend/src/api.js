@@ -79,8 +79,8 @@ export async function scanQR(file) {
   return res.json();
 }
 
-export async function getModelMetrics() {
-  const res = await fetch(`${BASE}/metrics`);
+export async function getModelMetrics(modelType = "multimodal") {
+  const res = await fetch(`${BASE}/metrics?model_type=${modelType}`);
   if (!res.ok) throw new Error("Metrics fetch failed");
   return res.json();
 }

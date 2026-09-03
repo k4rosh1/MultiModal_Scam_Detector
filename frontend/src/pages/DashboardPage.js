@@ -165,15 +165,24 @@ export default function DashboardPage() {
   return (
     <div className="dashboard-page">
       <div className="page-header">
-        <div>
-          <h1 className="page-title">Dashboard</h1>
-          <p className="page-sub">
-            Live overview · auto-refreshes every 15s (pauses when tab is
-            inactive)
-            {stats?.mock_mode && (
-              <span className="mock-tag"> · 🟡 Mock Mode</span>
-            )}
-          </p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div style={{ width: '48px', height: '48px', background: 'var(--accent-dim)', color: 'var(--accent)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="7" height="9"></rect>
+              <rect x="14" y="3" width="7" height="5"></rect>
+              <rect x="14" y="12" width="7" height="9"></rect>
+              <rect x="3" y="16" width="7" height="5"></rect>
+            </svg>
+          </div>
+          <div>
+            <h1 className="page-title" style={{ margin: '0 0 4px 0' }}>Dashboard</h1>
+            <p className="page-sub" style={{ margin: 0 }}>
+              Live overview · auto-refreshes every 15s (pauses when tab is inactive)
+              {stats?.mock_mode && (
+                <span className="mock-tag"> · 🟡 Mock Mode</span>
+              )}
+            </p>
+          </div>
         </div>
         <div style={{ display: "flex", gap: 10 }}>
           <button className="btn btn-ghost" onClick={load}>

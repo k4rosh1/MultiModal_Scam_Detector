@@ -14,6 +14,7 @@ import {
 import "./MetricsPage.css";
 
 export default function MetricsPage() {
+  const [modelType, setModelType] = useState("multimodal");
   const [metrics, setMetrics] = useState({
     accuracy: 92.4,
     precision: 91.1,
@@ -30,12 +31,19 @@ export default function MetricsPage() {
   });
 
   useEffect(() => {
-    getModelMetrics().then((data) => {
+    getModelMetrics(modelType).then((data) => {
       if (data && data.total_samples > 0) {
         setMetrics(data);
+      } else {
+        setMetrics({
+          accuracy: 0, precision: 0, recall: 0, f1: 0,
+          total_samples: 0, scam_samples: 0, legit_samples: 0,
+          true_positives: 0, true_negatives: 0, false_positives: 0, false_negatives: 0,
+          evaluation_date: "N/A"
+        });
       }
     }).catch(console.error);
-  }, []);
+  }, [modelType]);
 
   const data = [
     { name: "Accuracy", value: metrics.accuracy },
@@ -63,406 +71,425 @@ export default function MetricsPage() {
     });
 
     const logoBase64 = await toBase64("/WebLogo.png");
+    
+    // Fetch both metrics specifically for the report
+    const [multiData, baseData] = await Promise.all([
+      getModelMetrics("multimodal").catch(() => metrics),
+      getModelMetrics("baseline").catch(() => metrics)
+    ]);
 
     const doc = new jsPDF("p", "mm", "a4");
-    const W = doc.internal.pageSize.getWidth();   // 210
-    const H = doc.internal.pageSize.getHeight();   // 297
-    const M = 15;
-    const cW = W - 2 * M;
 
-    // Color palette
-    const GREEN    = [44, 110, 73];
-    const DKGREEN  = [31, 80, 53];
-    const LTGREEN  = [240, 253, 244];
-    const DARK     = [30, 30, 40];
-    const GRAY     = [130, 130, 145];
-    const LTGRAY   = [245, 247, 250];
-    const WHITE    = [255, 255, 255];
-    const BORDER   = [225, 228, 232];
-    const RED_T    = [220, 50, 50];
+    const generatePage = (metricsData, modelName, pageNum) => {
+      const W = doc.internal.pageSize.getWidth();   // 210
+      const H = doc.internal.pageSize.getHeight();   // 297
+      const M = 15;
+      const cW = W - 2 * M;
 
-    // Parse date / time from evaluation_date
-    const dateStr  = metrics.evaluation_date || "N/A";
-    const datePart = dateStr.includes("\u2022") ? dateStr.split("\u2022")[0].trim() : dateStr;
-    const timePart = dateStr.includes("\u2022") ? dateStr.split("\u2022")[1].trim() : "";
-    const reportId = `PRG-${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,"0")}${String(new Date().getDate()).padStart(2,"0")}-001`;
+      // Color palette
+      const GREEN    = [44, 110, 73];
+      const DKGREEN  = [31, 80, 53];
+      const LTGREEN  = [240, 253, 244];
+      const DARK     = [30, 30, 40];
+      const GRAY     = [130, 130, 145];
+      const LTGRAY   = [245, 247, 250];
+      const WHITE    = [255, 255, 255];
+      const BORDER   = [225, 228, 232];
+      const RED_T    = [220, 50, 50];
 
-    // ═══════════════════════════════════════════
-    //  HEADER
-    // ═══════════════════════════════════════════
-    let y = 12;
+      // Parse date / time from evaluation_date
+      const dateStr  = metricsData.evaluation_date || "N/A";
+      const datePart = dateStr.includes("\u2022") ? dateStr.split("\u2022")[0].trim() : dateStr;
+      const timePart = dateStr.includes("\u2022") ? dateStr.split("\u2022")[1].trim() : "";
+      const reportId = `PRG-${new Date().getFullYear()}-${String(new Date().getMonth()+1).padStart(2,"0")}${String(new Date().getDate()).padStart(2,"0")}-00${pageNum}`;
 
-    // Logo image
-    if (logoBase64) {
-      doc.addImage(logoBase64, "PNG", M, y, 28, 28);
-    }
+      const sPercent = metricsData.total_samples > 0 ? ((metricsData.scam_samples / metricsData.total_samples) * 100).toFixed(1) : 0;
+      const lPercent = metricsData.total_samples > 0 ? ((metricsData.legit_samples / metricsData.total_samples) * 100).toFixed(1) : 0;
 
-    // Title block
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(24);
-    doc.setTextColor(...DARK);
-    doc.text("Protego", M + 34, y + 10);
+      // ═══════════════════════════════════════════
+      //  HEADER
+      // ═══════════════════════════════════════════
+      let y = 12;
 
-    doc.setFontSize(13);
-    doc.setTextColor(...DARK);
-    doc.text("Model Performance Report", M + 34, y + 18);
+      // Logo image
+      if (logoBase64) {
+        doc.addImage(logoBase64, "PNG", M, y, 28, 28);
+      }
 
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(8);
-    doc.setTextColor(...GRAY);
-    const hDesc = doc.splitTextToSize(
-      "Evaluation of Protego\u2019s mBERT + Early Fusion + Metadata model on the hard test set.",
-      72
-    );
-    doc.text(hDesc, M + 34, y + 24);
+      // Title block
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(24);
+      doc.setTextColor(...DARK);
+      doc.text("Protego", M + 34, y + 10);
 
-    // Right side: date, time, report ID
-    const rx = W - M;
+      doc.setFontSize(13);
+      doc.setTextColor(...DARK);
+      doc.text("Model Performance Report", M + 34, y + 18);
 
-    // Calendar icon
-    doc.setFillColor(...GREEN);
-    doc.roundedRect(rx - 62, y + 3, 4, 4, 1, 1, "F");
-    doc.setFontSize(5); doc.setTextColor(...WHITE); doc.setFont("helvetica","bold");
-    doc.text("D", rx - 61, y + 6);
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(8);
-    doc.setTextColor(...DARK);
-    doc.text(datePart, rx - 56, y + 6.5);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      doc.setTextColor(...GRAY);
+      const hDesc = doc.splitTextToSize(
+        `Evaluation of Protego\u2019s ${modelName} model on the hard test set.`,
+        72
+      );
+      doc.text(hDesc, M + 34, y + 24);
 
-    // Clock icon
-    doc.setFillColor(...GREEN);
-    doc.circle(rx - 60, y + 14, 2, "F");
-    doc.setFontSize(4.5); doc.setTextColor(...WHITE); doc.setFont("helvetica","bold");
-    doc.text("T", rx - 61.2, y + 14.8);
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(8);
-    doc.setTextColor(...DARK);
-    doc.text(timePart, rx - 56, y + 15);
+      // Right side: date, time, report ID
+      const rx = W - M;
 
-    // Report ID
-    doc.setFontSize(7.5);
-    doc.setTextColor(...GRAY);
-    doc.text(`Report ID: ${reportId}`, rx - 62, y + 24);
+      // Calendar icon
+      doc.setFillColor(...GREEN);
+      doc.roundedRect(rx - 62, y + 3, 4, 4, 1, 1, "F");
+      doc.setFontSize(5); doc.setTextColor(...WHITE); doc.setFont("helvetica","bold");
+      doc.text("D", rx - 61, y + 6);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      doc.setTextColor(...DARK);
+      doc.text(datePart, rx - 56, y + 6.5);
 
-    // Separator
-    y = 48;
-    doc.setDrawColor(...BORDER);
-    doc.setLineWidth(0.3);
-    doc.line(M, y, W - M, y);
+      // Clock icon
+      doc.setFillColor(...GREEN);
+      doc.circle(rx - 60, y + 14, 2, "F");
+      doc.setFontSize(4.5); doc.setTextColor(...WHITE); doc.setFont("helvetica","bold");
+      doc.text("T", rx - 61.2, y + 14.8);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      doc.setTextColor(...DARK);
+      doc.text(timePart, rx - 56, y + 15);
 
-    // ═══════════════════════════════════════════
-    //  OVERALL PERFORMANCE
-    // ═══════════════════════════════════════════
-    y = 54;
+      // Report ID
+      doc.setFontSize(7.5);
+      doc.setTextColor(...GRAY);
+      doc.text(`Report ID: ${reportId}`, rx - 62, y + 24);
 
-    // Section icon (green circle with checkmark shape)
-    doc.setFillColor(...GREEN);
-    doc.circle(M + 4, y + 4, 4, "F");
-    doc.setFont("helvetica", "bold"); doc.setFontSize(7); doc.setTextColor(...WHITE);
-    doc.text("\u2713", M + 2.3, y + 5.5);
+      // Separator
+      y = 48;
+      doc.setDrawColor(...BORDER);
+      doc.setLineWidth(0.3);
+      doc.line(M, y, W - M, y);
 
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(11);
-    doc.setTextColor(...GREEN);
-    doc.text("OVERALL PERFORMANCE", M + 12, y + 6);
+      // ═══════════════════════════════════════════
+      //  OVERALL PERFORMANCE
+      // ═══════════════════════════════════════════
+      y = 54;
 
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(8);
-    doc.setTextColor(...GRAY);
-    const perfDesc = doc.splitTextToSize(
-      "Protego\u2019s model shows strong performance in detecting scams with high reliability.",
-      80
-    );
-    doc.text(perfDesc, M + 12, y + 13);
+      // Section icon (green circle with checkmark shape)
+      doc.setFillColor(...GREEN);
+      doc.circle(M + 4, y + 4, 4, "F");
+      doc.setFont("helvetica", "bold"); doc.setFontSize(7); doc.setTextColor(...WHITE);
+      doc.text("\u2713", M + 2.3, y + 5.5);
 
-    // Big accuracy card (right side)
-    const accCardX = W - M - 70;
-    const accCardY = y;
-    doc.setFillColor(...WHITE);
-    doc.setDrawColor(...GREEN);
-    doc.setLineWidth(0.7);
-    doc.roundedRect(accCardX, accCardY, 70, 28, 3, 3, "FD");
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(11);
+      doc.setTextColor(...GREEN);
+      doc.text("OVERALL PERFORMANCE", M + 12, y + 6);
 
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(28);
-    doc.setTextColor(...GREEN);
-    doc.text(`${metrics.accuracy.toFixed(1)}%`, accCardX + 12, accCardY + 15);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(8);
+      doc.setTextColor(...GRAY);
+      const perfDesc = doc.splitTextToSize(
+        "Protego\u2019s model shows strong performance in detecting scams with high reliability.",
+        80
+      );
+      doc.text(perfDesc, M + 12, y + 13);
 
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(9);
-    doc.setTextColor(...GRAY);
-    doc.text("Overall Accuracy", accCardX + 12, accCardY + 22);
+      // Big accuracy card (right side)
+      const accCardX = W - M - 70;
+      const accCardY = y;
+      doc.setFillColor(...WHITE);
+      doc.setDrawColor(...GREEN);
+      doc.setLineWidth(0.7);
+      doc.roundedRect(accCardX, accCardY, 70, 28, 3, 3, "FD");
 
-    // Small trend bars icon in the card
-    doc.setFillColor(200, 235, 210);
-    doc.rect(accCardX + 51, accCardY + 16, 3.5, 8, "F");
-    doc.rect(accCardX + 56, accCardY + 12, 3.5, 12, "F");
-    doc.rect(accCardX + 61, accCardY + 8,  3.5, 16, "F");
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(28);
+      doc.setTextColor(...GREEN);
+      doc.text(`${(metricsData.accuracy || 0).toFixed(1)}%`, accCardX + 12, accCardY + 15);
 
-    // ═══════════════════════════════════════════
-    //  KEY METRICS
-    // ═══════════════════════════════════════════
-    y = 88;
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      doc.setTextColor(...GRAY);
+      doc.text("Overall Accuracy", accCardX + 12, accCardY + 22);
 
-    // Bar‑chart icon
-    doc.setFillColor(...GREEN);
-    doc.rect(M + 1, y - 1, 2, 5, "F");
-    doc.rect(M + 3.5, y - 3, 2, 7, "F");
-    doc.rect(M + 6, y + 0, 2, 4, "F");
+      // Small trend bars icon in the card
+      doc.setFillColor(200, 235, 210);
+      doc.rect(accCardX + 51, accCardY + 16, 3.5, 8, "F");
+      doc.rect(accCardX + 56, accCardY + 12, 3.5, 12, "F");
+      doc.rect(accCardX + 61, accCardY + 8,  3.5, 16, "F");
 
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(11);
-    doc.setTextColor(...GREEN);
-    doc.text("KEY METRICS", M + 12, y + 3);
+      // ═══════════════════════════════════════════
+      //  KEY METRICS
+      // ═══════════════════════════════════════════
+      y = 88;
 
-    y = 96;
-    const mcCards = [
-      { label: "Accuracy",  val: metrics.accuracy,  desc: "Overall correctness of the model\u2019s predictions." },
-      { label: "Precision", val: metrics.precision, desc: "Proportion of predicted scams that are actually scams." },
-      { label: "Recall",    val: metrics.recall,    desc: "Proportion of actual scams that were correctly detected." },
-      { label: "F-1 Score", val: metrics.f1,        desc: "Harmonic mean of Precision and Recall." },
-    ];
-    const mcW = (cW - 12) / 4;
+      // Bar‑chart icon
+      doc.setFillColor(...GREEN);
+      doc.rect(M + 1, y - 1, 2, 5, "F");
+      doc.rect(M + 3.5, y - 3, 2, 7, "F");
+      doc.rect(M + 6, y + 0, 2, 4, "F");
 
-    mcCards.forEach((card, i) => {
-      const cx = M + i * (mcW + 4);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(11);
+      doc.setTextColor(...GREEN);
+      doc.text("KEY METRICS", M + 12, y + 3);
 
-      // Card
+      y = 96;
+      const mcCards = [
+        { label: "Accuracy",  val: metricsData.accuracy || 0,  desc: "Overall correctness of the model\u2019s predictions." },
+        { label: "Precision", val: metricsData.precision || 0, desc: "Proportion of predicted scams that are actually scams." },
+        { label: "Recall",    val: metricsData.recall || 0,    desc: "Proportion of actual scams that were correctly detected." },
+        { label: "F-1 Score", val: metricsData.f1 || 0,        desc: "Harmonic mean of Precision and Recall." },
+      ];
+      const mcW = (cW - 12) / 4;
+
+      mcCards.forEach((card, i) => {
+        const cx = M + i * (mcW + 4);
+
+        // Card
+        doc.setFillColor(...WHITE);
+        doc.setDrawColor(...BORDER);
+        doc.setLineWidth(0.25);
+        doc.roundedRect(cx, y, mcW, 44, 2, 2, "FD");
+
+        // Icon
+        doc.setFillColor(220, 245, 230);
+        doc.circle(cx + 6, y + 7, 4, "F");
+        doc.setFillColor(...GREEN);
+        doc.circle(cx + 6, y + 7, 2, "F");
+
+        // Label
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(8.5);
+        doc.setTextColor(...DARK);
+        doc.text(card.label, cx + 13, y + 8.5);
+
+        // Value
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(20);
+        doc.setTextColor(...DARK);
+        doc.text(card.val.toFixed(1) + "%", cx + 5, y + 22);
+
+        // Description
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(6.5);
+        doc.setTextColor(...GRAY);
+        const dl = doc.splitTextToSize(card.desc, mcW - 8);
+        doc.text(dl, cx + 5, y + 28);
+
+        // Progress bar
+        const bY = y + 39;
+        doc.setFillColor(225, 230, 235);
+        doc.roundedRect(cx + 4, bY, mcW - 8, 2, 1, 1, "F");
+        doc.setFillColor(...GREEN);
+        doc.roundedRect(cx + 4, bY, Math.max(1, (mcW - 8) * card.val / 100), 2, 1, 1, "F");
+      });
+
+      // ═══════════════════════════════════════════
+      //  METRICS OVERVIEW  +  EVALUATION DETAILS
+      // ═══════════════════════════════════════════
+      y = 148;
+      const halfW = (cW - 6) / 2;
+
+      // ── Left card: METRICS OVERVIEW ──
       doc.setFillColor(...WHITE);
       doc.setDrawColor(...BORDER);
       doc.setLineWidth(0.25);
-      doc.roundedRect(cx, y, mcW, 44, 2, 2, "FD");
+      doc.roundedRect(M, y, halfW, 88, 2, 2, "FD");
 
-      // Icon
-      doc.setFillColor(220, 245, 230);
-      doc.circle(cx + 6, y + 7, 4, "F");
+      // Title icon (bar chart)
       doc.setFillColor(...GREEN);
-      doc.circle(cx + 6, y + 7, 2, "F");
+      doc.rect(M + 5, y + 5, 2, 5, "F");
+      doc.rect(M + 7.5, y + 3, 2, 7, "F");
+      doc.rect(M + 10, y + 6, 2, 4, "F");
 
-      // Label
       doc.setFont("helvetica", "bold");
-      doc.setFontSize(8.5);
-      doc.setTextColor(...DARK);
-      doc.text(card.label, cx + 13, y + 8.5);
+      doc.setFontSize(9);
+      doc.setTextColor(...GREEN);
+      doc.text("METRICS OVERVIEW", M + 15, y + 9);
 
-      // Value
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(20);
-      doc.setTextColor(...DARK);
-      doc.text(card.val.toFixed(1) + "%", cx + 5, y + 22);
+      // Draw the bar chart
+      const chartX = M + 14;
+      const chartY = y + 18;
+      const chartH = 52;
+      const chartW = halfW - 22;
 
-      // Description
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(6.5);
-      doc.setTextColor(...GRAY);
-      const dl = doc.splitTextToSize(card.desc, mcW - 8);
-      doc.text(dl, cx + 5, y + 28);
+      // Y‑axis labels + grid
+      const yLabels = [
+        { label: "100%", frac: 0 },
+        { label: "75%",  frac: 0.25 },
+        { label: "50%",  frac: 0.5 },
+        { label: "25%",  frac: 0.75 },
+        { label: "0%",   frac: 1 },
+      ];
+      yLabels.forEach((item) => {
+        const ly = chartY + chartH * item.frac;
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(6);
+        doc.setTextColor(...GRAY);
+        doc.text(item.label, M + 4, ly + 1);
+        doc.setDrawColor(235, 238, 242);
+        doc.setLineWidth(0.15);
+        doc.line(chartX, ly, chartX + chartW, ly);
+      });
 
-      // Progress bar
-      const bY = y + 39;
-      doc.setFillColor(225, 230, 235);
-      doc.roundedRect(cx + 4, bY, mcW - 8, 2, 1, 1, "F");
+      // Bars
+      const barVals = [
+        { name: "Accuracy",  v: metricsData.accuracy || 0 },
+        { name: "Precision", v: metricsData.precision || 0 },
+        { name: "Recall",    v: metricsData.recall || 0 },
+        { name: "F-1 Score", v: metricsData.f1 || 0 },
+      ];
+      const bGap = 4;
+      const bW = (chartW - bGap * 5) / 4;
+
+      barVals.forEach((bar, i) => {
+        const bx = chartX + bGap + i * (bW + bGap);
+        const bh = (bar.v / 100) * chartH;
+        const by = chartY + chartH - bh;
+
+        doc.setFillColor(...GREEN);
+        doc.roundedRect(bx, by, bW, bh, 1, 1, "F");
+
+        // Value label on top
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(5.5);
+        doc.setTextColor(...DARK);
+        doc.text(bar.v.toFixed(1) + "%", bx + bW / 2, by - 2, { align: "center" });
+
+        // X‑axis label
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(5.5);
+        doc.setTextColor(...GRAY);
+        doc.text(bar.name, bx + bW / 2, chartY + chartH + 5, { align: "center" });
+      });
+
+      // Legend
       doc.setFillColor(...GREEN);
-      doc.roundedRect(cx + 4, bY, Math.max(1, (mcW - 8) * card.val / 100), 2, 1, 1, "F");
-    });
-
-    // ═══════════════════════════════════════════
-    //  METRICS OVERVIEW  +  EVALUATION DETAILS
-    // ═══════════════════════════════════════════
-    y = 148;
-    const halfW = (cW - 6) / 2;
-
-    // ── Left card: METRICS OVERVIEW ──
-    doc.setFillColor(...WHITE);
-    doc.setDrawColor(...BORDER);
-    doc.setLineWidth(0.25);
-    doc.roundedRect(M, y, halfW, 88, 2, 2, "FD");
-
-    // Title icon (bar chart)
-    doc.setFillColor(...GREEN);
-    doc.rect(M + 5, y + 5, 2, 5, "F");
-    doc.rect(M + 7.5, y + 3, 2, 7, "F");
-    doc.rect(M + 10, y + 6, 2, 4, "F");
-
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(9);
-    doc.setTextColor(...GREEN);
-    doc.text("METRICS OVERVIEW", M + 15, y + 9);
-
-    // Draw the bar chart
-    const chartX = M + 14;
-    const chartY = y + 18;
-    const chartH = 52;
-    const chartW = halfW - 22;
-
-    // Y‑axis labels + grid
-    const yLabels = [
-      { label: "100%", frac: 0 },
-      { label: "75%",  frac: 0.25 },
-      { label: "50%",  frac: 0.5 },
-      { label: "25%",  frac: 0.75 },
-      { label: "0%",   frac: 1 },
-    ];
-    yLabels.forEach((item) => {
-      const ly = chartY + chartH * item.frac;
+      doc.rect(M + halfW / 2 - 14, y + 81, 3, 3, "F");
       doc.setFont("helvetica", "normal");
       doc.setFontSize(6);
       doc.setTextColor(...GRAY);
-      doc.text(item.label, M + 4, ly + 1);
-      doc.setDrawColor(235, 238, 242);
-      doc.setLineWidth(0.15);
-      doc.line(chartX, ly, chartX + chartW, ly);
-    });
+      doc.text("Performance (%)", M + halfW / 2 - 10, y + 83.5);
 
-    // Bars
-    const barVals = [
-      { name: "Accuracy",  v: metrics.accuracy },
-      { name: "Precision", v: metrics.precision },
-      { name: "Recall",    v: metrics.recall },
-      { name: "F-1 Score", v: metrics.f1 },
-    ];
-    const bGap = 4;
-    const bW = (chartW - bGap * 5) / 4;
+      // ── Right card: EVALUATION DETAILS ──
+      const rdX = M + halfW + 6;
+      doc.setFillColor(...WHITE);
+      doc.setDrawColor(...BORDER);
+      doc.setLineWidth(0.25);
+      doc.roundedRect(rdX, y, halfW, 88, 2, 2, "FD");
 
-    barVals.forEach((bar, i) => {
-      const bx = chartX + bGap + i * (bW + bGap);
-      const bh = (bar.v / 100) * chartH;
-      const by = chartY + chartH - bh;
-
+      // Title icon
       doc.setFillColor(...GREEN);
-      doc.roundedRect(bx, by, bW, bh, 1, 1, "F");
+      doc.rect(rdX + 5, y + 3, 2, 7, "F");
+      doc.rect(rdX + 7.5, y + 5, 2, 5, "F");
+      doc.rect(rdX + 10, y + 4, 2, 6, "F");
 
-      // Value label on top
       doc.setFont("helvetica", "bold");
-      doc.setFontSize(5.5);
-      doc.setTextColor(...DARK);
-      doc.text(bar.v.toFixed(1) + "%", bx + bW / 2, by - 2, { align: "center" });
+      doc.setFontSize(9);
+      doc.setTextColor(...GREEN);
+      doc.text("EVALUATION DETAILS", rdX + 15, y + 9);
 
-      // X‑axis label
+      // Detail rows
+      const detailRows = [
+        { color: GREEN, label: "Model",           value: modelName },
+        { color: GREEN, label: "Dataset",          value: "Hard Test Set" },
+        { color: GREEN, label: "Total Samples",    value: (metricsData.total_samples || 0).toLocaleString() },
+        { color: RED_T, label: "Scam Samples",     value: `${(metricsData.scam_samples || 0).toLocaleString()} (${sPercent}%)` },
+        { color: GREEN, label: "Non-Scam Samples", value: `${(metricsData.legit_samples || 0).toLocaleString()} (${lPercent}%)` },
+        { color: GREEN, label: "True Positives",   value: (metricsData.true_positives || 0).toLocaleString() },
+        { color: GREEN, label: "True Negatives",   value: (metricsData.true_negatives || 0).toLocaleString() },
+        { color: RED_T, label: "False Positives",  value: (metricsData.false_positives || 0).toLocaleString() },
+        { color: RED_T, label: "False Negatives",  value: (metricsData.false_negatives || 0).toLocaleString() },
+        { color: GREEN, label: "Evaluation Date",  value: metricsData.evaluation_date || "N/A" },
+        { color: GREEN, label: "Split",            value: "Test Set (20%)" },
+      ];
+
+      const rowH = 6.8;
+      detailRows.forEach((row, i) => {
+        const ry = y + 14 + i * rowH;
+
+        // Icon dot
+        const dotBg = row.color === RED_T ? [254, 226, 226] : [220, 245, 230];
+        doc.setFillColor(...dotBg);
+        doc.circle(rdX + 8, ry + 3.5, 3, "F");
+        doc.setFillColor(...row.color);
+        doc.circle(rdX + 8, ry + 3.5, 1.5, "F");
+
+        // Label
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(7.5);
+        doc.setTextColor(...(row.color === RED_T ? RED_T : DARK));
+        doc.text(row.label, rdX + 14, ry + 4.5);
+
+        // Value
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(7.5);
+        doc.setTextColor(...DARK);
+        doc.text(row.value, rdX + halfW - 5, ry + 4.5, { align: "right" });
+      });
+
+      // ═══════════════════════════════════════════
+      //  ABOUT THESE METRICS
+      // ═══════════════════════════════════════════
+      y = 244;
+      doc.setFillColor(...LTGREEN);
+      doc.setDrawColor(...GREEN);
+      doc.setLineWidth(0.4);
+      doc.roundedRect(M, y, cW, 24, 3, 3, "FD");
+
+      // Checkmark icon
+      doc.setFillColor(...GREEN);
+      doc.circle(M + 8, y + 8, 5, "F");
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(8);
+      doc.setTextColor(...WHITE);
+      doc.text("\u2713", M + 6, y + 9.8);
+
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(9);
+      doc.setTextColor(...GREEN);
+      doc.text("About These Metrics", M + 16, y + 7);
+
       doc.setFont("helvetica", "normal");
-      doc.setFontSize(5.5);
+      doc.setFontSize(7);
+      doc.setTextColor(80, 80, 100);
+      const aboutTxt = doc.splitTextToSize(
+        "These metrics are calculated using the hard test set, which contains challenging examples the model has never seen during training or validation to ensure real-world reliability.",
+        cW - 22
+      );
+      doc.text(aboutTxt, M + 16, y + 13);
+
+      // ═══════════════════════════════════════════
+      //  FOOTER
+      // ═══════════════════════════════════════════
+      const fy = H - 10;
+      doc.setDrawColor(...BORDER);
+      doc.setLineWidth(0.3);
+      doc.line(M, fy - 4, W - M, fy - 4);
+
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(6.5);
       doc.setTextColor(...GRAY);
-      doc.text(bar.name, bx + bW / 2, chartY + chartH + 5, { align: "center" });
-    });
 
-    // Legend
-    doc.setFillColor(...GREEN);
-    doc.rect(M + halfW / 2 - 14, y + 81, 3, 3, "F");
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(6);
-    doc.setTextColor(...GRAY);
-    doc.text("Performance (%)", M + halfW / 2 - 10, y + 83.5);
+      // Left
+      doc.setFillColor(...GREEN);
+      doc.circle(M + 2, fy + 0.5, 1.5, "F");
+      doc.text("https://protego.app", M + 6, fy + 1.2);
 
-    // ── Right card: EVALUATION DETAILS ──
-    const rdX = M + halfW + 6;
-    doc.setFillColor(...WHITE);
-    doc.setDrawColor(...BORDER);
-    doc.setLineWidth(0.25);
-    doc.roundedRect(rdX, y, halfW, 88, 2, 2, "FD");
+      // Center
+      doc.text("\u201cProtego\u201d \u2014 Latin for \u201cI protect\u201d", W / 2, fy + 1.2, { align: "center" });
 
-    // Title icon
-    doc.setFillColor(...GREEN);
-    doc.rect(rdX + 5, y + 3, 2, 7, "F");
-    doc.rect(rdX + 7.5, y + 5, 2, 5, "F");
-    doc.rect(rdX + 10, y + 4, 2, 6, "F");
+      // Right
+      doc.text(`Page ${pageNum} of 2`, W - M, fy + 1.2, { align: "right" });
+    };
 
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(9);
-    doc.setTextColor(...GREEN);
-    doc.text("EVALUATION DETAILS", rdX + 15, y + 9);
-
-    // Detail rows
-    const detailRows = [
-      { color: GREEN, label: "Model",           value: "mBERT + Early Fusion + Metadata" },
-      { color: GREEN, label: "Dataset",          value: "Hard Test Set" },
-      { color: GREEN, label: "Total Samples",    value: metrics.total_samples.toLocaleString() },
-      { color: RED_T, label: "Scam Samples",     value: `${metrics.scam_samples.toLocaleString()} (${scamPercent}%)` },
-      { color: GREEN, label: "Non-Scam Samples", value: `${metrics.legit_samples.toLocaleString()} (${legitPercent}%)` },
-      { color: GREEN, label: "True Positives",   value: (metrics.true_positives || 0).toLocaleString() },
-      { color: GREEN, label: "True Negatives",   value: (metrics.true_negatives || 0).toLocaleString() },
-      { color: RED_T, label: "False Positives",  value: (metrics.false_positives || 0).toLocaleString() },
-      { color: RED_T, label: "False Negatives",  value: (metrics.false_negatives || 0).toLocaleString() },
-      { color: GREEN, label: "Evaluation Date",  value: metrics.evaluation_date },
-      { color: GREEN, label: "Split",            value: "Test Set (20%)" },
-    ];
-
-    const rowH = 6.8;
-    detailRows.forEach((row, i) => {
-      const ry = y + 14 + i * rowH;
-
-      // Icon dot
-      const dotBg = row.color === RED_T ? [254, 226, 226] : [220, 245, 230];
-      doc.setFillColor(...dotBg);
-      doc.circle(rdX + 8, ry + 3.5, 3, "F");
-      doc.setFillColor(...row.color);
-      doc.circle(rdX + 8, ry + 3.5, 1.5, "F");
-
-      // Label
-      doc.setFont("helvetica", "bold");
-      doc.setFontSize(7.5);
-      doc.setTextColor(...(row.color === RED_T ? RED_T : DARK));
-      doc.text(row.label, rdX + 14, ry + 4.5);
-
-      // Value
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(7.5);
-      doc.setTextColor(...DARK);
-      doc.text(row.value, rdX + halfW - 5, ry + 4.5, { align: "right" });
-    });
-
-    // ═══════════════════════════════════════════
-    //  ABOUT THESE METRICS
-    // ═══════════════════════════════════════════
-    y = 244;
-    doc.setFillColor(...LTGREEN);
-    doc.setDrawColor(...GREEN);
-    doc.setLineWidth(0.4);
-    doc.roundedRect(M, y, cW, 24, 3, 3, "FD");
-
-    // Checkmark icon
-    doc.setFillColor(...GREEN);
-    doc.circle(M + 8, y + 8, 5, "F");
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(8);
-    doc.setTextColor(...WHITE);
-    doc.text("\u2713", M + 6, y + 9.8);
-
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(9);
-    doc.setTextColor(...GREEN);
-    doc.text("About These Metrics", M + 16, y + 7);
-
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(7);
-    doc.setTextColor(80, 80, 100);
-    const aboutTxt = doc.splitTextToSize(
-      "These metrics are calculated using the hard test set, which contains challenging examples the model has never seen during training or validation to ensure real-world reliability.",
-      cW - 22
-    );
-    doc.text(aboutTxt, M + 16, y + 13);
-
-    // ═══════════════════════════════════════════
-    //  FOOTER
-    // ═══════════════════════════════════════════
-    const fy = H - 10;
-    doc.setDrawColor(...BORDER);
-    doc.setLineWidth(0.3);
-    doc.line(M, fy - 4, W - M, fy - 4);
-
-    doc.setFont("helvetica", "normal");
-    doc.setFontSize(6.5);
-    doc.setTextColor(...GRAY);
-
-    // Left
-    doc.setFillColor(...GREEN);
-    doc.circle(M + 2, fy + 0.5, 1.5, "F");
-    doc.text("https://protego.app", M + 6, fy + 1.2);
-
-    // Center
-    doc.text("\u201cProtego\u201d \u2014 Latin for \u201cI protect\u201d", W / 2, fy + 1.2, { align: "center" });
-
-    // Right
-    doc.text("Page 1 of 1", W - M, fy + 1.2, { align: "right" });
+    // Render Page 1 (Multimodal)
+    generatePage(multiData, "mBERT + Early Fusion + Metadata", 1);
+    
+    // Render Page 2 (Baseline)
+    doc.addPage();
+    generatePage(baseData, "mBERT Text-Only (Baseline)", 2);
 
     // Save
     doc.save("Protego_Model_Performance_Report.pdf");
@@ -482,6 +509,20 @@ export default function MetricsPage() {
             <p className="metrics-subtitle">
               View the evaluation results of Protego's model on the hard test set.
             </p>
+            <div className="metrics-model-toggle" style={{display: 'flex', gap: '10px', marginTop: '15px'}}>
+              <button 
+                className={`btn ${modelType === 'multimodal' ? 'btn-primary' : 'btn-outline'}`}
+                onClick={() => setModelType('multimodal')}
+              >
+                Early Fusion (Proposed)
+              </button>
+              <button 
+                className={`btn ${modelType === 'baseline' ? 'btn-primary' : 'btn-outline'}`}
+                onClick={() => setModelType('baseline')}
+              >
+                Text-Only (Baseline)
+              </button>
+            </div>
           </div>
         </div>
         <button className="btn btn-outline export-btn" onClick={exportPDF}>
@@ -604,7 +645,7 @@ export default function MetricsPage() {
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
                 Model
               </div>
-              <div className="d-value">mBERT + Early Fusion + Metadata</div>
+              <div className="d-value">{modelType === "multimodal" ? "mBERT + Early Fusion + Metadata" : "mBERT Text-Only (Baseline)"}</div>
             </div>
             
             <div className="detail-row">
