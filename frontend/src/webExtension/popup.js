@@ -11,7 +11,7 @@ if (typeof chrome === "undefined" || !chrome.runtime || !chrome.runtime.id) {
   throw new Error("Not running in Chrome extension context");
 }
 
-const API_URL = "http://localhost:8000";
+const API_URL = "https://protego.duckdns.org";
 
 const scanProfileBtn = document.getElementById("scanProfileBtn");
 const profileScanStatus = document.getElementById("profileScanStatus");
@@ -27,9 +27,9 @@ const resultScamProb = document.getElementById("resultScamProb");
 const resultLegitProb = document.getElementById("resultLegitProb");
 const confidenceBar = document.getElementById("confidenceBar");
 
-const REACT_APP_URL = "http://localhost:3000";
+const REACT_APP_URL = "https://protego-scam-shield.vercel.app";
 const DASHBOARD_URL = `${REACT_APP_URL}/dashboard`;
-const HISTORY_URL = `${REACT_APP_URL}/history`;
+const HISTORY_URL = `${REACT_APP_URL}/dashboard`;
 
 const SCAM_SAMPLE = {
   text: "GRABE! Kumita ako ng 50000 pesos sa loob ng 7 araw! DM mo ko para malaman kung paano! bit.ly/abc123",
@@ -95,6 +95,9 @@ async function detectSampleText(sampleData, isScamSample) {
   activeBtn.disabled = true;
 
   try {
+    const sessionData = await chrome.storage.local.get(["session_id"]);
+    const sessionId = sessionData.session_id || null;
+
     const response = await fetch(`${API_URL}/predict`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -103,6 +106,7 @@ async function detectSampleText(sampleData, isScamSample) {
         platform: sampleData.platform,
         account_age: sampleData.account_age,
         posting_frequency: sampleData.posting_frequency,
+        session_id: sessionId,
       }),
     });
 
@@ -121,7 +125,9 @@ async function detectSampleText(sampleData, isScamSample) {
 
 async function loadStats() {
   try {
-    const response = await fetch(`${API_URL}/stats`);
+    const sessionData = await chrome.storage.local.get(["session_id"]);
+    const sessionId = sessionData.session_id || "";
+    const response = await fetch(`${API_URL}/stats?session_id=${sessionId}`);
     if (!response.ok) throw new Error("Failed to fetch stats");
 
     const stats = await response.json();

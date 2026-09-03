@@ -280,4 +280,17 @@ async function updateSettings(newSettings) {
   }
 }
 
+// ── Ensure session_id exists on every startup ────────────────────────────────
+// onInstalled only fires once. If the extension was installed before session
+// support was added, chrome.storage won't have a session_id. This runs every
+// time the service worker wakes up to guarantee one exists.
+(async function ensureSessionId() {
+  const data = await chrome.storage.local.get(["session_id"]);
+  if (!data.session_id) {
+    const id = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 15);
+    await chrome.storage.local.set({ session_id: id });
+    console.log("🔑 Generated session_id on startup:", id);
+  }
+})();
+
 console.log("Protego background service worker started");

@@ -20,21 +20,58 @@ function extractErrorMessage(errBody, fallback) {
 }
 
 // ── Session ID (per-device privacy) ──────────────────────────────────────────
-// Priority: URL param > localStorage > generate new
+// Priority: URL param > extension-synced localStorage > existing localStorage > generate new
+//
+// The extension's sync.js content script sets a "protego_extension_syncing" flag
+// in localStorage at document_start, then asynchronously reads chrome.storage
+// and writes the extension's session_id. We need to wait for that to finish
+// before generating our own (which would create a mismatch).
+
+let _cachedSessionId = null;
+
 export function getSessionId() {
+  if (_cachedSessionId) return _cachedSessionId;
+
+  // Check URL param first (highest priority)
   const urlParams = new URLSearchParams(window.location.search);
   const urlSession = urlParams.get('session_id');
   if (urlSession) {
     localStorage.setItem('protego_session_id', urlSession);
+    _cachedSessionId = urlSession;
     return urlSession;
   }
+
+  // Read whatever is in localStorage (extension may have already synced)
   let session = localStorage.getItem('protego_session_id');
   if (!session) {
     session = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 15);
     localStorage.setItem('protego_session_id', session);
   }
+  _cachedSessionId = session;
   return session;
 }
+
+// If the extension syncs AFTER React has already booted, listen for the
+// storage change and update the cached value so subsequent API calls use it.
+window.addEventListener('storage', (e) => {
+  if (e.key === 'protego_session_id' && e.newValue) {
+    _cachedSessionId = e.newValue;
+  }
+});
+
+// Also poll once briefly at startup in case extension sync is in progress
+(function waitForExtensionSync() {
+  if (!localStorage.getItem('protego_extension_syncing')) return;
+  let attempts = 0;
+  const interval = setInterval(() => {
+    attempts++;
+    if (!localStorage.getItem('protego_extension_syncing') || attempts > 10) {
+      clearInterval(interval);
+      const synced = localStorage.getItem('protego_session_id');
+      if (synced) _cachedSessionId = synced;
+    }
+  }, 50);
+})();
 
 export async function predict(payload) {
   payload.session_id = getSessionId();
