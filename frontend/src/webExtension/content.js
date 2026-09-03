@@ -394,24 +394,11 @@ function highlightPost(element, result, text) {
   element.style.backgroundColor = "rgba(240, 82, 82, 0.05)";
   element.style.paddingLeft = "10px";
 
-  if (!element.querySelector(".protego-badge")) {
-    const computedPosition = window.getComputedStyle(element).position;
-    if (computedPosition === "static") {
-      element.style.position = "relative";
-    }
-    
-    // Create physical space at the top of the text block so the absolute badge
-    // mathematically cannot cover the post's text.
-    element.style.marginTop = "24px";
-
-    const badge = document.createElement("span");
+  if (!element.parentElement.querySelector(".protego-badge")) {
+    const badge = document.createElement("div");
     badge.className = "protego-badge";
-    badge.textContent = "⚠️ SCAM";
+    badge.textContent = "⚠️ SCAM DETECTED";
     badge.style.cssText = `
-      position: absolute;
-      top: -24px;
-      right: 0px;
-      z-index: 2147483647;
       display: inline-block;
       background: #f05252;
       color: white;
@@ -419,9 +406,9 @@ function highlightPost(element, result, text) {
       font-weight: bold;
       padding: 4px 8px;
       border-radius: 4px;
+      margin-bottom: 8px;
       box-shadow: 0 1px 3px rgba(0,0,0,0.3);
       cursor: pointer;
-      pointer-events: auto;
     `;
     badge.onclick = (e) => {
       e.stopPropagation();
@@ -430,7 +417,8 @@ function highlightPost(element, result, text) {
         `⚠️ SCAM DETECTED!\n\nConfidence: ${result.confidence}\n\nText: ${text.substring(0, 200)}`,
       );
     };
-    element.appendChild(badge);
+    // Insert completely outside the text node to prevent any overlapping
+    element.insertAdjacentElement('beforebegin', badge);
   }
 }
 
