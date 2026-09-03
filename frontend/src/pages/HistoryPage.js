@@ -166,7 +166,7 @@ export default function HistoryPage() {
         </div>
         <div style={{ display: "flex", gap: 10 }}>
           <button className="btn" style={{background: 'var(--accent)', color: '#fff'}} onClick={downloadCSV}>
-            💾 Download Archive (CSV)
+             Download Archive (CSV)
           </button>
           <button className="btn btn-ghost" onClick={load}>
             ↻ Refresh
@@ -422,7 +422,7 @@ export default function HistoryPage() {
         
         {archives.length === 0 ? (
           <div className="card" style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
-            <div style={{ fontSize: 32, marginBottom: 8 }}>📦</div>
+            <div style={{ fontSize: 32, marginBottom: 8 }}></div>
             <p style={{ margin: 0 }}>No auto-archives yet.</p>
             <p style={{ fontSize: 12, marginTop: 4 }}>
               When your active history reaches 1,000 scans, the oldest 500 will automatically be compressed and saved here to free up cloud space!
