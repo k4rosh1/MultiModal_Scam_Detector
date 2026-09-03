@@ -49,7 +49,6 @@ export default function HistoryPage() {
   const [selectedItem, setSelectedItem] = useState(null); // NEW: Tracks clicked row
 
   const [archives, setArchives] = useState([]);
-  const [totalDetections, setTotalDetections] = useState(0);
 
   const [page, setPage] = useState(1);
 
@@ -70,7 +69,6 @@ export default function HistoryPage() {
 
       setAllData(merged);
       setArchives(archivesData);
-      setTotalDetections(stats.total_detections || merged.length);
       setError("");
     } catch (err) {
       console.error("Failed to load history:", err);
