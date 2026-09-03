@@ -76,6 +76,34 @@ def get_stats(request: Request, session_id: Optional[str] = None):
         "mock_mode":        config.MOCK_MODE,
     }
 
+@router.get("/archives")
+@config.limiter.limit("60/minute")
+def get_archives(request: Request, session_id: Optional[str] = None):
+    if not session_id:
+        return []
+    with database.get_db() as conn:
+        rows = conn.execute("SELECT id, created_at, expires_at, scan_count FROM archives WHERE session_id = ? ORDER BY id DESC", (session_id,)).fetchall()
+        return [dict(r) for r in rows]
+
+from fastapi.responses import PlainTextResponse
+
+@router.get("/archives/{archive_id}/download")
+@config.limiter.limit("20/minute")
+def download_archive(request: Request, archive_id: int, session_id: Optional[str] = None):
+    if not session_id:
+        return PlainTextResponse("Unauthorized", status_code=401)
+    with database.get_db() as conn:
+        row = conn.execute("SELECT csv_data, created_at FROM archives WHERE id = ? AND session_id = ?", (archive_id, session_id)).fetchone()
+        if not row:
+            return PlainTextResponse("Archive not found", status_code=404)
+        
+        headers = {
+            "Content-Disposition": f"attachment; filename=protego_archive_{row['created_at'][:10]}.csv"
+        }
+        # The csv_data is stored with literal \n characters from the join
+        csv_text = row["csv_data"].replace("\\n", "\n")
+        return PlainTextResponse(csv_text, headers=headers)
+
 
 
 import os

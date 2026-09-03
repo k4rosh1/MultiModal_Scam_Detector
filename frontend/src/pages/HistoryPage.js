@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { getDetections } from "../api";
+import { getDetections, getArchives, getArchiveDownloadUrl } from "../api";
 import "./HistoryPage.css";
 
 const FILTERS = [
@@ -48,13 +48,16 @@ export default function HistoryPage() {
   const [error, setError] = useState("");
   const [selectedItem, setSelectedItem] = useState(null); // NEW: Tracks clicked row
 
+  const [archives, setArchives] = useState([]);
+
   const load = async () => {
     setLoading(true);
     try {
       // Get both backend and extension data
-      const [backendData, extensionData] = await Promise.all([
+      const [backendData, extensionData, archivesData] = await Promise.all([
         getDetections(200).catch(() => []),
         getExtensionHistory().catch(() => []),
+        getArchives().catch(() => []),
       ]);
 
       // Merge and sort by ID (newest first)
@@ -62,6 +65,7 @@ export default function HistoryPage() {
       allData.sort((a, b) => (b.id || 0) - (a.id || 0));
 
       setRows(allData);
+      setArchives(archivesData);
       setError("");
     } catch (err) {
       console.error("Failed to load history:", err);
@@ -375,6 +379,39 @@ export default function HistoryPage() {
                 </div>
               </div>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── AUTO ARCHIVES SECTION ── */}
+      {archives.length > 0 && (
+        <div style={{ marginTop: '2rem' }}>
+          <h2 className="page-title" style={{ fontSize: 18, marginBottom: 16 }}>Previous Scans (Auto-Archives)</h2>
+          <div className="table-wrap card">
+            <table className="det-table">
+              <thead>
+                <tr>
+                  <th>Created Date</th>
+                  <th>Total Scans</th>
+                  <th>Expires On</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {archives.map(a => (
+                  <tr key={a.id}>
+                    <td className="ts-cell">{new Date(a.created_at + 'Z').toLocaleString()}</td>
+                    <td className="mono-cell">{a.scan_count}</td>
+                    <td className="ts-cell" style={{ color: 'var(--text-muted)' }}>{new Date(a.expires_at + 'Z').toLocaleString()}</td>
+                    <td>
+                      <a href={getArchiveDownloadUrl(a.id)} className="btn" style={{ padding: '4px 12px', fontSize: 12, background: 'var(--accent)', color: '#fff', textDecoration: 'none' }}>
+                        Download CSV
+                      </a>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       )}

@@ -136,3 +136,16 @@ export async function getModelMetrics(modelType = "multimodal") {
   if (!res.ok) throw new Error("Metrics fetch failed");
   return res.json();
 }
+
+export async function getArchives() {
+  const sessionId = getSessionId();
+  if (!sessionId) return [];
+  const res = await fetch(${BASE}/archives?session_id=);
+  if (!res.ok) return [];
+  return res.json();
+}
+
+export function getArchiveDownloadUrl(archiveId) {
+  const sessionId = getSessionId();
+  return ${BASE}/archives//download?session_id=;
+}

@@ -41,6 +41,16 @@ def init_db():
                 duplicate_count   INTEGER DEFAULT 0
             )
         """)
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS archives (
+                id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                session_id  TEXT,
+                created_at  TEXT,
+                expires_at  TEXT,
+                scan_count  INTEGER,
+                csv_data    TEXT
+            )
+        """)
         conn.execute("CREATE INDEX IF NOT EXISTS idx_label ON detections(label)")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_platform ON detections(platform)")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_timestamp ON detections(timestamp)")
@@ -82,13 +92,14 @@ def find_duplicate(text: str, platform: str, account_age: float, posting_frequen
 
 def save_detection(data: dict, is_mock: bool = False):
     with get_db() as conn:
+        now = datetime.datetime.utcnow()
         conn.execute("""
             INSERT INTO detections
             (timestamp, platform, text, label, verdict, confidence,
              scam_prob, legit_prob, account_age, posting_frequency, is_mock, text_hash, explanation, session_id)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         """, (
-            datetime.datetime.utcnow().isoformat(),
+            now.isoformat(),
             config.encrypt(data.get("platform", "unknown")),
             config.encrypt((data.get("text", ""))[:500]),
             data.get("label",     -1),
@@ -110,18 +121,39 @@ def save_detection(data: dict, is_mock: bool = False):
         ))
         conn.commit()
 
-        # Enforce 1000-scan retention limit per session to save cloud database space
+        # Enforce auto-archive limit and purge old archives
         session_id = data.get("session_id", None)
         if session_id:
-            conn.execute("""
-                DELETE FROM detections 
-                WHERE id NOT IN (
-                    SELECT id FROM detections 
-                    WHERE session_id = ? 
-                    ORDER BY id DESC 
-                    LIMIT 1000
-                ) AND session_id = ?
-            """, (session_id, session_id))
+            # 1. Purge expired archives globally (older than 30 days)
+            conn.execute("DELETE FROM archives WHERE expires_at < ?", (now.isoformat(),))
+            
+            # 2. Check active limit
+            count = conn.execute("SELECT COUNT(*) FROM detections WHERE session_id = ?", (session_id,)).fetchone()[0]
+            if count >= 1000:
+                # Get the oldest 500
+                oldest_500 = conn.execute("SELECT * FROM detections WHERE session_id = ? ORDER BY id ASC LIMIT 500", (session_id,)).fetchall()
+                if oldest_500:
+                    headers = ["ID", "Timestamp", "Platform", "Verdict", "Confidence", "ScamProb", "LegitProb", "Text"]
+                    csv_lines = [",".join(headers)]
+                    ids_to_delete = []
+                    
+                    for row in oldest_500:
+                        decrypted = decrypt_row(dict(row))
+                        ids_to_delete.append(str(decrypted["id"]))
+                        safe_text = (decrypted.get("text", "")).replace('"', '""')
+                        line = f'{decrypted["id"]},{decrypted["timestamp"]},{decrypted["platform"]},{decrypted["verdict"]},{decrypted["confidence"]},{decrypted["scam_prob"]},{decrypted["legit_prob"]},"{safe_text}"'
+                        csv_lines.append(line)
+                        
+                    csv_data = "\\n".join(csv_lines)
+                    expires_at = (now + datetime.timedelta(days=30)).isoformat()
+                    
+                    conn.execute("""
+                        INSERT INTO archives (session_id, created_at, expires_at, scan_count, csv_data)
+                        VALUES (?, ?, ?, ?, ?)
+                    """, (session_id, now.isoformat(), expires_at, len(oldest_500), csv_data))
+                    
+                    placeholders = ",".join(["?"] * len(ids_to_delete))
+                    conn.execute(f"DELETE FROM detections WHERE id IN ({placeholders})", ids_to_delete)
             conn.commit()
 def decrypt_row(row: dict) -> dict:
     row["text"]     = config.decrypt(row.get("text",     ""))
