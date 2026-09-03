@@ -11,6 +11,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import Dataset, DataLoader
 from transformers import AutoTokenizer, AutoModel
+import argparse
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import MinMaxScaler
 from sklearn.metrics import (accuracy_score, precision_score,
@@ -93,6 +94,26 @@ class EarlyFusionScamDetector(nn.Module):
 
         fused = torch.cat([cls_embedding, metadata], dim=1)  # [batch, 770]
         return self.classifier(fused)
+
+
+class TextOnlyScamDetector(nn.Module):
+    """
+    Text-only scam detector using mBERT.
+    768-dim mBERT [CLS] -> FC layer -> 2 classes
+    """
+    def __init__(self, bert_model_name):
+        super().__init__()
+        self.bert = AutoModel.from_pretrained(bert_model_name)
+        self.classifier = nn.Linear(768, 2)
+        self.dropout = nn.Dropout(0.2)
+
+    def forward(self, input_ids, attention_mask, metadata=None, training=False):
+        # We accept 'metadata' and 'training' args to remain compatible with the training loop
+        bert_out = self.bert(input_ids=input_ids, attention_mask=attention_mask)
+        cls_embedding = bert_out.last_hidden_state[:, 0, :]  # 768-dim
+        if training:
+            cls_embedding = self.dropout(cls_embedding)
+        return self.classifier(cls_embedding)
 
 
 # ── TRAINING FUNCTION ────────────────────────────────────────────────
@@ -212,6 +233,10 @@ def evaluate_model(model, test_loader, model_name="Model"):
 
 # ── MAIN EXECUTION ────────────────────────────────────────────────────────────
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Train Scam Detection Models")
+    parser.add_argument("--model", type=str, choices=["multimodal", "baseline"], default="multimodal", help="Which model to train (multimodal or baseline)")
+    args = parser.parse_args()
+
     print(f"Using device: {DEVICE}")
 
     print("\n[1/7] Loading dataset...")
@@ -250,15 +275,34 @@ if __name__ == "__main__":
     val_loader   = DataLoader(ScamDataset(X_text_val,   X_meta_val,   y_val,   tokenizer, MAX_LEN), batch_size=BATCH_SIZE)
     test_loader  = DataLoader(ScamDataset(X_text_test,  X_meta_test,  y_test,  tokenizer, MAX_LEN), batch_size=BATCH_SIZE)
 
-    print("\n[5/7] Building and Training Proposed Model (Early Fusion)...")
-    multimodal_model = EarlyFusionScamDetector(bert_model_name=MODEL_NAME)
-    multimodal_history = train_model(multimodal_model, train_loader, val_loader, "ProposedModel")
+    if args.model == "multimodal":
+        print("\n[5/7] Building and Training Proposed Model (Early Fusion)...")
+        model = EarlyFusionScamDetector(bert_model_name=MODEL_NAME)
+        model_name_str = "ProposedModel"
+        save_path = "./scam_model/model.pt"
+        eval_name = "Proposed Multi-Modal System"
+        curves_path = "./results/training_curves.png"
+        cm_path = "./results/confusion_matrix.png"
+        fig_title_curves = "Proposed Model — Training Curves"
+        fig_title_cm = "Confusion Matrix — Proposed Model"
+    else:
+        print("\n[5/7] Building and Training Baseline Model (Text-Only)...")
+        model = TextOnlyScamDetector(bert_model_name=MODEL_NAME)
+        model_name_str = "BaselineModel"
+        save_path = "./scam_model/baseline_model.pt"
+        eval_name = "Baseline Text-Only System"
+        curves_path = "./results/baseline_training_curves.png"
+        cm_path = "./results/baseline_confusion_matrix.png"
+        fig_title_curves = "Baseline Model — Training Curves"
+        fig_title_cm = "Confusion Matrix — Baseline Model"
 
-    torch.save(multimodal_model.state_dict(), "./scam_model/model.pt")
-    print("\n✅ Model saved to ./scam_model/model.pt")
+    history = train_model(model, train_loader, val_loader, model_name_str)
+
+    torch.save(model.state_dict(), save_path)
+    print(f"\n✅ Model saved to {save_path}")
 
     print("\n[6/7] Evaluating model on held-out test set...")
-    results = evaluate_model(multimodal_model, test_loader, "Proposed Multi-Modal System")
+    results = evaluate_model(model, test_loader, eval_name)
 
     print("\n[7/7] Generating Plots...")
     os.makedirs("./results", exist_ok=True)
@@ -266,31 +310,31 @@ if __name__ == "__main__":
 
     # Training curves
     fig, axes = plt.subplots(1, 2, figsize=(12, 4))
-    fig.suptitle("Proposed Model — Training Curves", fontsize=13, fontweight='bold')
+    fig.suptitle(fig_title_curves, fontsize=13, fontweight='bold')
 
-    axes[0].plot(epochs_x, multimodal_history["train_loss"], label="Train Loss", marker='o')
-    axes[0].plot(epochs_x, multimodal_history["val_loss"],   label="Val Loss",   marker='s')
+    axes[0].plot(epochs_x, history["train_loss"], label="Train Loss", marker='o')
+    axes[0].plot(epochs_x, history["val_loss"],   label="Val Loss",   marker='s')
     axes[0].set_title("Loss over Epochs")
     axes[0].set_xlabel("Epoch"); axes[0].set_ylabel("Loss"); axes[0].legend()
 
-    axes[1].plot(epochs_x, multimodal_history["val_acc"], label="Val Accuracy", marker='o', color='green')
-    axes[1].plot(epochs_x, multimodal_history["val_f1"],  label="Val F1",       marker='s', color='orange')
+    axes[1].plot(epochs_x, history["val_acc"], label="Val Accuracy", marker='o', color='green')
+    axes[1].plot(epochs_x, history["val_f1"],  label="Val F1",       marker='s', color='orange')
     axes[1].set_title("Accuracy & F1 over Epochs")
     axes[1].set_xlabel("Epoch"); axes[1].legend()
 
     plt.tight_layout()
-    plt.savefig("./results/training_curves.png", dpi=150)
-    print("   ✅ Training curves saved to ./results/training_curves.png")
+    plt.savefig(curves_path, dpi=150)
+    print(f"   ✅ Training curves saved to {curves_path}")
 
     # Confusion matrix
     plt.figure(figsize=(6, 5))
     from sklearn.metrics import confusion_matrix
     cm = confusion_matrix(results["labels"], results["preds"])
     sns.heatmap(cm, annot=True, fmt='d', cmap='Blues', xticklabels=["Legit","Scam"], yticklabels=["Legit","Scam"])
-    plt.title("Confusion Matrix — Proposed Model")
+    plt.title(fig_title_cm)
     plt.ylabel("True"); plt.xlabel("Predicted")
     plt.tight_layout()
-    plt.savefig("./results/confusion_matrix.png", dpi=150)
-    print("   ✅ Confusion matrix saved to ./results/confusion_matrix.png")
+    plt.savefig(cm_path, dpi=150)
+    print(f"   ✅ Confusion matrix saved to {cm_path}")
 
     print("\n✅ Pipeline complete!")

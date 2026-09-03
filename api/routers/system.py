@@ -86,8 +86,12 @@ import json
 import config
 
 @router.get("/metrics")
-def get_metrics():
-    metrics_path = os.path.join(config.MODEL_DIR, "metrics.json")
+def get_metrics(model_type: Optional[str] = "multimodal"):
+    if model_type == "baseline":
+        metrics_path = os.path.join(config.MODEL_DIR, "baseline_metrics.json")
+    else:
+        metrics_path = os.path.join(config.MODEL_DIR, "metrics.json")
+        
     if os.path.exists(metrics_path):
         with open(metrics_path, "r") as f:
             return json.load(f)

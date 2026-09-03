@@ -1,5 +1,6 @@
 import os
 import sys
+import argparse
 import pandas as pd
 import numpy as np
 import torch
@@ -13,9 +14,13 @@ import warnings
 warnings.filterwarnings("ignore")
 
 # Import architecture and dataset class from the main script
-from scam_detection import EarlyFusionScamDetector, ScamDataset, MAX_LEN, DEVICE, MODEL_NAME, METADATA_COLS
+from scam_detection import EarlyFusionScamDetector, TextOnlyScamDetector, ScamDataset, MAX_LEN, DEVICE, MODEL_NAME, METADATA_COLS
 
 def main():
+    parser = argparse.ArgumentParser(description="Test Scam Detection Models")
+    parser.add_argument("--model", type=str, choices=["multimodal", "baseline"], default="multimodal", help="Which model to test")
+    args = parser.parse_args()
+
     print(f"Using device: {DEVICE}")
     print("\n[1/4] Loading hard_test_dataset.csv...")
     if not os.path.exists("hard_test_dataset.csv"):
@@ -33,8 +38,14 @@ def main():
     try:
         scaler = joblib.load("./scam_model/scaler.pkl")
         tokenizer = AutoTokenizer.from_pretrained("./scam_model")
-        model = EarlyFusionScamDetector(bert_model_name=MODEL_NAME)
-        model.load_state_dict(torch.load("./scam_model/model.pt", map_location=DEVICE))
+        
+        if args.model == "multimodal":
+            model = EarlyFusionScamDetector(bert_model_name=MODEL_NAME)
+            model.load_state_dict(torch.load("./scam_model/model.pt", map_location=DEVICE))
+        else:
+            model = TextOnlyScamDetector(bert_model_name=MODEL_NAME)
+            model.load_state_dict(torch.load("./scam_model/baseline_model.pt", map_location=DEVICE))
+            
         model.to(DEVICE)
         model.eval()
         print("   ✅ Assets loaded successfully.")
@@ -69,6 +80,22 @@ def main():
     rec  = recall_score(all_labels,    all_preds)
     f1   = f1_score(all_labels,        all_preds)
 
+    # Dynamic file paths based on model choice
+    if args.model == "multimodal":
+        fp_path = "./results/false_positives.csv"
+        fn_path = "./results/false_negatives.csv"
+        cm_path = "./results/hard_test_confusion_matrix.png"
+        metrics_path = "./scam_model/metrics.json"
+        eval_title = "FUSED SYSTEM — HARD TEST EVALUATION"
+        cm_title = "Confusion Matrix — Hard Test Set"
+    else:
+        fp_path = "./results/baseline_false_positives.csv"
+        fn_path = "./results/baseline_false_negatives.csv"
+        cm_path = "./results/baseline_hard_test_confusion_matrix.png"
+        metrics_path = "./scam_model/baseline_metrics.json"
+        eval_title = "BASELINE SYSTEM — HARD TEST EVALUATION"
+        cm_title = "Confusion Matrix — Baseline Hard Test Set"
+
     # Save False Positives and False Negatives to CSV
     os.makedirs("./results", exist_ok=True)
     all_preds_arr = np.array(all_preds)
@@ -77,12 +104,12 @@ def main():
     fp_indices = np.where((all_preds_arr == 1) & (all_labels_arr == 0))[0]
     fn_indices = np.where((all_preds_arr == 0) & (all_labels_arr == 1))[0]
     
-    df.iloc[fp_indices].to_csv("./results/false_positives.csv", index=False)
-    df.iloc[fn_indices].to_csv("./results/false_negatives.csv", index=False)
+    df.iloc[fp_indices].to_csv(fp_path, index=False)
+    df.iloc[fn_indices].to_csv(fn_path, index=False)
     print("   ✅ Exported actual text data for FP/FN to ./results/")
 
     print(f"\n{'='*55}")
-    print(f"  FUSED SYSTEM — HARD TEST EVALUATION")
+    print(f"  {eval_title}")
     print(f"{'='*55}")
     print(f"  Accuracy  : {acc:.4f}")
     print(f"  Precision : {prec:.4f}")
@@ -97,12 +124,12 @@ def main():
     tn, fp, fn, tp = cm.ravel()
     
     sns.heatmap(cm, annot=True, fmt='d', cmap='Reds', xticklabels=["Legit","Scam"], yticklabels=["Legit","Scam"])
-    plt.title("Confusion Matrix — Hard Test Set")
+    plt.title(cm_title)
     plt.ylabel("True"); plt.xlabel("Predicted")
     plt.tight_layout()
     os.makedirs("./results", exist_ok=True)
-    plt.savefig("./results/hard_test_confusion_matrix.png", dpi=150)
-    print("   ✅ Confusion matrix saved to ./results/hard_test_confusion_matrix.png")
+    plt.savefig(cm_path, dpi=150)
+    print(f"   ✅ Confusion matrix saved to {cm_path}")
 
     import json
     import datetime
@@ -120,9 +147,9 @@ def main():
         "false_negatives": int(fn),
         "evaluation_date": datetime.datetime.now().strftime("%b %d, %Y • %I:%M %p")
     }
-    with open("./scam_model/metrics.json", "w") as f:
+    with open(metrics_path, "w") as f:
         json.dump(metrics, f, indent=4)
-    print("   ✅ Metrics saved to ./scam_model/metrics.json")
+    print(f"   ✅ Metrics saved to {metrics_path}")
 
 if __name__ == "__main__":
     main()

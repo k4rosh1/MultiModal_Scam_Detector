@@ -101,11 +101,19 @@ export default function HistoryPage() {
   return (
     <div className="history-page">
       <div className="page-header">
-        <div>
-          <h1 className="page-title">Detection History</h1>
-          <p className="page-sub">
-            All past detections — from manual input and browser extension
-          </p>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+          <div style={{ width: '48px', height: '48px', background: 'var(--accent-dim)', color: 'var(--accent)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+            <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <polyline points="12 6 12 12 16 14"></polyline>
+            </svg>
+          </div>
+          <div>
+            <h1 className="page-title" style={{ margin: '0 0 4px 0' }}>Detection History</h1>
+            <p className="page-sub" style={{ margin: 0 }}>
+              All past detections — from manual input and browser extension
+            </p>
+          </div>
         </div>
         <div style={{ display: "flex", gap: 10 }}>
           <button className="btn btn-ghost" onClick={load}>
