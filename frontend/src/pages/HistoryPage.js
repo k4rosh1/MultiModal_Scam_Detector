@@ -50,14 +50,17 @@ export default function HistoryPage() {
 
   const [archives, setArchives] = useState([]);
 
+  const [page, setPage] = useState(1);
+
   const load = async () => {
     setLoading(true);
     try {
       // Get both backend and extension data
+      const offset = (page - 1) * 100;
       const [backendData, extensionData, archivesData] = await Promise.all([
-        getDetections(100).catch(() => []),
-        getExtensionHistory().catch(() => []),
-        getArchives().catch(() => []),
+        getDetections(100, null, offset).catch(() => []),
+        page === 1 ? getExtensionHistory().catch(() => []) : Promise.resolve([]),
+        page === 1 ? getArchives().catch(() => []) : Promise.resolve(archives),
       ]);
 
       // Merge and sort by ID (newest first)
@@ -65,7 +68,7 @@ export default function HistoryPage() {
       allData.sort((a, b) => (b.id || 0) - (a.id || 0));
 
       setRows(allData);
-      setArchives(archivesData);
+      if (page === 1) setArchives(archivesData);
       setError("");
     } catch (err) {
       console.error("Failed to load history:", err);
@@ -77,7 +80,7 @@ export default function HistoryPage() {
 
   useEffect(() => {
     load();
-  }, []);
+  }, [page]);
 
   
 
@@ -287,6 +290,25 @@ export default function HistoryPage() {
           </table>
         </div>
       )}
+
+      {/* ── PAGINATION CONTROLS ── */}
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '1rem', marginTop: '1rem' }}>
+        <button 
+          className="btn" 
+          onClick={() => setPage(p => Math.max(1, p - 1))}
+          disabled={page === 1}
+        >
+          &larr; Previous Page
+        </button>
+        <span style={{ fontSize: 14 }}>Page {page}</span>
+        <button 
+          className="btn" 
+          onClick={() => setPage(p => p + 1)}
+          disabled={rows.length < 100} // Basic check: if we got less than limit, no more pages
+        >
+          Next Page &rarr;
+        </button>
+      </div>
 
       {/* ── DETAIL MODAL ── */}
       {selectedItem && (

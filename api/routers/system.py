@@ -16,7 +16,7 @@ def health():
 
 @router.get("/detections")
 @config.limiter.limit("60/minute")
-def get_detections(request: Request, limit: int = 100, platform: Optional[str] = None, session_id: Optional[str] = None):
+def get_detections(request: Request, limit: int = 100, offset: int = 0, platform: Optional[str] = None, session_id: Optional[str] = None):
     if not session_id:
         return []
 
@@ -24,14 +24,22 @@ def get_detections(request: Request, limit: int = 100, platform: Optional[str] =
         query = "SELECT * FROM detections WHERE session_id = ?"
         params = [session_id]
         
-        query += " ORDER BY id DESC LIMIT 500"
+        # We handle platform filtering in Python due to encryption,
+        # but we can at least fetch more if there's a platform filter.
+        # However, to do true DB-level limit/offset with encrypted platform, 
+        # it's tricky. Let's just fetch all and slice in Python for safety, 
+        # OR just use DB offset if platform is None.
+        
+        query += " ORDER BY id DESC"
         rows = conn.execute(query, params).fetchall()
         result = [database.decrypt_row(dict(r)) for r in rows]
+        
         if platform:
-            result = [r for r in result if r["platform"] == platform][:limit]
-        else:
-            result = result[:limit]
-    return result
+            p_lower = platform.lower()
+            result = [r for r in result if r.get("platform", "").lower() == p_lower]
+            
+        # Apply slice for pagination
+        return result[offset : offset + limit]
 
 @router.get("/stats")
 @config.limiter.limit("60/minute")

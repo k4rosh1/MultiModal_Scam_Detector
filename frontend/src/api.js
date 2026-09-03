@@ -94,11 +94,11 @@ export async function getStats() {
   return res.json();
 }
 
-export async function getDetections(limit = 100, platform = null) {
+export async function getDetections(limit = 100, platform = null, offset = 0) {
   const sessionId = getSessionId();
   let url = platform
-    ? `${BASE}/detections?limit=${limit}&platform=${platform}&session_id=${sessionId}`
-    : `${BASE}/detections?limit=${limit}&session_id=${sessionId}`;
+    ? `${BASE}/detections?limit=${limit}&offset=${offset}&platform=${platform}&session_id=${sessionId}`
+    : `${BASE}/detections?limit=${limit}&offset=${offset}&session_id=${sessionId}`;
   const res = await fetch(url);
   if (!res.ok) throw new Error("Detections fetch failed");
   return res.json();
