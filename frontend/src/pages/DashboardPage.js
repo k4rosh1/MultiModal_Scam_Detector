@@ -61,7 +61,7 @@ export default function DashboardPage() {
   const load = useCallback(async () => {
     setLoading((prev) => (prev === true ? true : false)); // only show spinner on first load
     try {
-      const [s, r] = await Promise.all([getStats(), getDetections(200)]);
+      const [s, r] = await Promise.all([getStats(), getDetections(100)]);
       setStats(s);
       setRows(r);
       setError("");

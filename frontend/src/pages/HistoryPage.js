@@ -55,7 +55,7 @@ export default function HistoryPage() {
     try {
       // Get both backend and extension data
       const [backendData, extensionData, archivesData] = await Promise.all([
-        getDetections(200).catch(() => []),
+        getDetections(100).catch(() => []),
         getExtensionHistory().catch(() => []),
         getArchives().catch(() => []),
       ]);
