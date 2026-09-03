@@ -108,13 +108,18 @@ export default function HistoryPage() {
     return matchFilter && matchSearch;
   });
 
-  const downloadCSV = () => {
-    if (!rows || rows.length === 0) {
+  const downloadCSV = async () => {
+    if (totalDetections === 0) {
       alert("No data to archive.");
       return;
     }
+    
+    // Fetch all active scans up to the 1000 cap for the manual export
+    const allData = await getDetections(1000, null, 0).catch(() => []);
+    if (allData.length === 0) return;
+
     const headers = ["ID", "Verdict", "Platform", "Confidence", "Scam Prob", "Legit Prob", "Timestamp", "Text"];
-    const csvRows = rows.map(r => {
+    const csvRows = allData.map(r => {
       const safeText = (r.text || "").replace(/"/g, '""');
       return [
         r.id,
