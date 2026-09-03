@@ -140,12 +140,12 @@ export async function getModelMetrics(modelType = "multimodal") {
 export async function getArchives() {
   const sessionId = getSessionId();
   if (!sessionId) return [];
-  const res = await fetch(${BASE}/archives?session_id=);
+  const res = await fetch(`${BASE}/archives?session_id=${sessionId}`);
   if (!res.ok) return [];
   return res.json();
 }
 
 export function getArchiveDownloadUrl(archiveId) {
   const sessionId = getSessionId();
-  return ${BASE}/archives//download?session_id=;
+  return `${BASE}/archives/${archiveId}/download?session_id=${sessionId}`;
 }
