@@ -29,14 +29,14 @@ const confidenceBar = document.getElementById("confidenceBar");
 
 // --- URL CONFIGURATION ---
 // Development URLs (Uncomment these for local testing)
-// const REACT_APP_URL = "http://localhost:3000";
-// const DASHBOARD_URL = `${REACT_APP_URL}/dashboard`;
-// const HISTORY_URL = `${REACT_APP_URL}/history`;
-
-// Production URLs (Uncomment these before deploying)
-const REACT_APP_URL = "https://protego-scam-shield.vercel.app";
+const REACT_APP_URL = "http://localhost:3000";
 const DASHBOARD_URL = `${REACT_APP_URL}/dashboard`;
 const HISTORY_URL = `${REACT_APP_URL}/history`;
+
+// Production URLs (Uncomment these before deploying)
+// const REACT_APP_URL = "https://protego-scam-shield.vercel.app";
+// const DASHBOARD_URL = `${REACT_APP_URL}/dashboard`;
+// const HISTORY_URL = `${REACT_APP_URL}/history`;
 
 const SCAM_SAMPLE = {
   text: "GRABE! Kumita ako ng 50000 pesos sa loob ng 7 araw! DM mo ko para malaman kung paano! bit.ly/abc123",

@@ -1,4 +1,4 @@
-const API_URL = "https://protego.duckdns.org";
+﻿const API_URL = "http://localhost:8000";
 
 const DEFAULT_SETTINGS = {
   autoDetectEnabled: true,
@@ -34,7 +34,7 @@ async function saveToHistory(detectionResult) {
 
     await chrome.storage.local.set({ detectionHistory: history });
     console.log(
-      "✅ Saved to history:",
+      "âœ… Saved to history:",
       detectionResult.verdict,
       detectionResult.platform,
     );
@@ -87,9 +87,9 @@ chrome.runtime.onInstalled.addListener(async () => {
   if (!sessionData.session_id) {
     const sessionId = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 15);
     await chrome.storage.local.set({ session_id: sessionId });
-    console.log("🔑 Generated new session_id:", sessionId);
+    console.log("ðŸ”‘ Generated new session_id:", sessionId);
   } else {
-    console.log("🔑 Existing session_id:", sessionData.session_id);
+    console.log("ðŸ”‘ Existing session_id:", sessionData.session_id);
   }
 
   console.log(
@@ -119,7 +119,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 
   if (request.action === "detectText") {
-    console.log("📡 Detecting text, length:", request.text?.length);
+    console.log("ðŸ“¡ Detecting text, length:", request.text?.length);
 
     if (request.manual !== true && !autoDetectEnabled) {
       sendResponse({
@@ -194,7 +194,7 @@ async function detectScam(
 
   if (resolvedAccountAge === 365 && resolvedPostingFrequency === 1) {
     console.warn(
-      "⚠️ Using fallback metadata (365 days / 1 post-per-day) — scraping likely failed for this page",
+      "âš ï¸ Using fallback metadata (365 days / 1 post-per-day) â€” scraping likely failed for this page",
     );
   }
 
@@ -204,7 +204,7 @@ async function detectScam(
     const sessionId = sessionData.session_id || null;
 
     console.log(
-      `📤 Calling API for ${platform}... (account_age=${resolvedAccountAge}, posting_frequency=${resolvedPostingFrequency})`,
+      `ðŸ“¤ Calling API for ${platform}... (account_age=${resolvedAccountAge}, posting_frequency=${resolvedPostingFrequency})`,
     );
     const response = await fetch(`${API_URL}/predict`, {
       method: "POST",
@@ -222,7 +222,7 @@ async function detectScam(
     if (!response.ok) throw new Error(`API error: ${response.status}`);
 
     const data = await response.json();
-    console.log(`🎯 API Result: ${data.verdict} (${data.confidence})`);
+    console.log(`ðŸŽ¯ API Result: ${data.verdict} (${data.confidence})`);
 
     await saveToHistory({
       text: text,
@@ -280,7 +280,7 @@ async function updateSettings(newSettings) {
   }
 }
 
-// ── Ensure session_id exists on every startup ────────────────────────────────
+// â”€â”€ Ensure session_id exists on every startup â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 // onInstalled only fires once. If the extension was installed before session
 // support was added, chrome.storage won't have a session_id. This runs every
 // time the service worker wakes up to guarantee one exists.
@@ -289,7 +289,7 @@ async function updateSettings(newSettings) {
   if (!data.session_id) {
     const id = crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).substring(2, 15);
     await chrome.storage.local.set({ session_id: id });
-    console.log("🔑 Generated session_id on startup:", id);
+    console.log("ðŸ”‘ Generated session_id on startup:", id);
   }
 })();
 
