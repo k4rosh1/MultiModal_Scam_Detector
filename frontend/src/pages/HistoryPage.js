@@ -384,9 +384,18 @@ export default function HistoryPage() {
       )}
 
       {/* ── AUTO ARCHIVES SECTION ── */}
-      {archives.length > 0 && (
-        <div style={{ marginTop: '2rem' }}>
-          <h2 className="page-title" style={{ fontSize: 18, marginBottom: 16 }}>Previous Scans (Auto-Archives)</h2>
+      <div style={{ marginTop: '3rem', marginBottom: '2rem' }}>
+        <h2 className="page-title" style={{ fontSize: 18, marginBottom: 16 }}>Previous Scans (Auto-Archives)</h2>
+        
+        {archives.length === 0 ? (
+          <div className="card" style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+            <div style={{ fontSize: 32, marginBottom: 8 }}>📦</div>
+            <p style={{ margin: 0 }}>No auto-archives yet.</p>
+            <p style={{ fontSize: 12, marginTop: 4 }}>
+              When your active history reaches 1,000 scans, the oldest 500 will automatically be compressed and saved here to free up cloud space!
+            </p>
+          </div>
+        ) : (
           <div className="table-wrap card">
             <table className="det-table">
               <thead>
@@ -413,8 +422,8 @@ export default function HistoryPage() {
               </tbody>
             </table>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
