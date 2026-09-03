@@ -27,6 +27,13 @@ const resultScamProb = document.getElementById("resultScamProb");
 const resultLegitProb = document.getElementById("resultLegitProb");
 const confidenceBar = document.getElementById("confidenceBar");
 
+// --- URL CONFIGURATION ---
+// Development URLs (Uncomment these for local testing)
+// const REACT_APP_URL = "http://localhost:3000";
+// const DASHBOARD_URL = `${REACT_APP_URL}/dashboard`;
+// const HISTORY_URL = `${REACT_APP_URL}/history`;
+
+// Production URLs (Uncomment these before deploying)
 const REACT_APP_URL = "https://protego-scam-shield.vercel.app";
 const DASHBOARD_URL = `${REACT_APP_URL}/dashboard`;
 const HISTORY_URL = `${REACT_APP_URL}/history`;
