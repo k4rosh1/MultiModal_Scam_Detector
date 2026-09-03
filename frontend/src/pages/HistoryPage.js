@@ -128,7 +128,7 @@ export default function HistoryPage() {
         `${parseFloat(r.confidence || 0).toFixed(1)}%`,
         `${parseFloat(r.scam_prob || 0).toFixed(1)}%`,
         `${parseFloat(r.legit_prob || 0).toFixed(1)}%`,
-        r.timestamp ? new Date(r.timestamp).toISOString() : "",
+        r.timestamp ? new Date(r.timestamp + (r.timestamp.endsWith('Z') ? '' : 'Z')).toISOString() : "",
         `"${safeText}"`
       ].join(",");
     });
@@ -232,7 +232,7 @@ export default function HistoryPage() {
                 const isUncertain = r.label === 2;
                 const conf = parseFloat(r.confidence) || 0;
                 const ts = r.timestamp
-                  ? new Date(r.timestamp).toLocaleString()
+                  ? new Date(r.timestamp + (r.timestamp.endsWith('Z') ? '' : 'Z')).toLocaleString()
                   : "—";
                 const rowClass = isUncertain ? "row-uncertain" : isScam ? "row-scam" : "row-legit";
                 const tagClass = isUncertain ? "tag-uncertain" : isScam ? "tag-scam" : "tag-legit";
@@ -367,9 +367,9 @@ export default function HistoryPage() {
                     {selectedItem.verdict}
                   </div>
                   <div style={{ fontSize: 12, color: "var(--text-dim)" }}>
-                    {selectedItem.platform.toUpperCase()} •{" "}
+                    {selectedItem.platform.toUpperCase()} • {" "}
                     {selectedItem.timestamp
-                      ? new Date(selectedItem.timestamp).toLocaleString()
+                      ? new Date(selectedItem.timestamp + (selectedItem.timestamp.endsWith('Z') ? '' : 'Z')).toLocaleString()
                       : "Unknown Date"}
                   </div>
                 </div>
