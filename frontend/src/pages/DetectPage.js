@@ -11,6 +11,7 @@ const DEFAULT_META = {
 function dateToDays(dateStr) {
   if (!dateStr) return 0;
   const joined = new Date(dateStr);
+  if (isNaN(joined)) return 0;
   const today = new Date();
   const diff = Math.floor((today - joined) / (1000 * 60 * 60 * 24));
   return diff < 0 ? 0 : diff;
@@ -514,32 +515,13 @@ export default function DetectPage() {
             </>
           ) : (
             <>
-              {/* ── NORMAL MODE — Tabs ── */}
-              <div className="tab-bar">
-                <button
-                  className={`tab-btn ${tab === "text" ? "tab-active" : ""}`}
-                  onClick={() => setTab("text")}
-                >
-                  Post Caption
-                </button>
-                <button
-                  className={`tab-btn ${tab === "meta" ? "tab-active" : ""}`}
-                  onClick={() => setTab("meta")}
-                >
-                  Account Metadata
-                </button>
-              </div>
-
-              {/* Text tab */}
-              {tab === "text" && (
-                <div className="tab-content">
-                  <label
-                    className="field-label"
-                    style={{ marginBottom: 8, display: "block" }}
-                  >
-                    Post / Caption Text
-                    <span className="field-hint"> — Taglish supported</span>
-                  </label>
+              {/* ── NORMAL MODE — Combined Form ── */}
+              <div className="tab-content meta-form" style={{ display: 'flex', flexDirection: 'column', gap: '24px', padding: '20px', border: '1px solid var(--border)', borderRadius: '8px', background: 'var(--bg-secondary)' }}>
+                
+                {/* Section 1: Post Caption */}
+                <div>
+                  <div className="meta-section-title" style={{ marginTop: 0, marginBottom: '16px' }}>Post Caption & Platform</div>
+                  
                   <div style={{ marginBottom: "12px", display: "flex", gap: "10px", alignItems: "center" }}>
                     <label style={{ fontWeight: 500 }}>Select Platform:</label>
                     <select 
@@ -552,19 +534,18 @@ export default function DetectPage() {
                       <option value="twitter">X (Twitter)</option>
                     </select>
                   </div>
+                  
                   <textarea
                     className="post-textarea"
-                    placeholder={
-                      "Paste a social media post here..."
-                    }
+                    placeholder="Paste a social media post here..."
                     value={text}
                     onChange={(e) => setText(e.target.value)}
-                    rows={8}
+                    rows={6}
                     maxLength={2000}
                   />
-                  <div className="char-count">{text.length} / 2,000 characters</div>
+                  <div className="char-count" style={{ marginTop: '4px', textAlign: 'right' }}>{text.length} / 2,000 characters</div>
                   
-                  <div className="info-box">
+                  <div className="info-box" style={{ marginTop: '12px' }}>
                     <div className="info-box-header">
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
                       Supports Tagalog, English, and Taglish
@@ -574,41 +555,67 @@ export default function DetectPage() {
                     </div>
                   </div>
                 </div>
-              )}
 
-              {/* Metadata tab */}
-              {tab === "meta" && (
-                <div className="tab-content meta-form">
-                  <div className="meta-section-title">Account Info</div>
+                <hr style={{ borderTop: '1px solid var(--border)', opacity: 0.5, margin: 0 }} />
+
+                {/* Section 2: Account Metadata */}
+                <div>
+                  <div className="meta-section-title" style={{ marginTop: 0, marginBottom: '16px' }}>Account Metadata</div>
+                  
                   <div className="date-field-row">
-                    <span className="date-field-label">
-                      Account Joined Date
-                    </span>
-                    <span className="date-field-hint">
-                      Pick the date the account was created
-                    </span>
-                    <input
-                      type="date"
-                      className="date-input"
-                      value={joinedDate}
-                      max={today}
-                      onChange={handleDateChange}
-                    />
-                  </div>
-                  <div className="days-display">
-                    <span className="days-label">Account age in days</span>
-                    <div className="days-value-wrap">
-                      <span className="days-formula">
-                        Today − Joined Date =
-                      </span>
-                      <span className="days-value">
-                        {meta.account_age} days
-                      </span>
+                    <span className="date-field-label">Account Joined Date</span>
+                    <span className="date-field-hint">Pick or type the date the account was created (YYYY-MM-DD)</span>
+                    
+                    <div style={{ display: 'flex', gap: '0', marginTop: '8px', position: 'relative' }}>
+                      <input
+                        type="text"
+                        className="date-input"
+                        placeholder="e.g. 2023-12-25"
+                        value={joinedDate}
+                        onChange={handleDateChange}
+                        style={{ flex: 1, paddingRight: '40px' }}
+                      />
+                      <input
+                        type="date"
+                        max={today}
+                        value={(() => {
+                          const d = new Date(joinedDate);
+                          return !isNaN(d) ? d.toISOString().split("T")[0] : "";
+                        })()}
+                        onChange={handleDateChange}
+                        style={{
+                          position: 'absolute',
+                          right: '8px',
+                          top: '50%',
+                          transform: 'translateY(-50%)',
+                          width: '24px',
+                          height: '24px',
+                          opacity: 0,
+                          cursor: 'pointer',
+                          zIndex: 2,
+                        }}
+                        title="Pick a date"
+                      />
+                      <svg
+                        width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+                        style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none', opacity: 0.5 }}
+                      >
+                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                        <line x1="16" y1="2" x2="16" y2="6"></line>
+                        <line x1="8" y1="2" x2="8" y2="6"></line>
+                        <line x1="3" y1="10" x2="21" y2="10"></line>
+                      </svg>
                     </div>
                   </div>
-                  <div className="meta-section-title" style={{ marginTop: 20 }}>
-                    Activity
+                  
+                  <div className="days-display" style={{ marginTop: '12px', marginBottom: '20px' }}>
+                    <span className="days-label">Account age in days</span>
+                    <div className="days-value-wrap">
+                      <span className="days-formula">Today − Joined Date =</span>
+                      <span className="days-value">{meta.account_age} days</span>
+                    </div>
                   </div>
+                  
                   <NumberField
                     label="Posts per Day"
                     name="posting_frequency"
@@ -620,7 +627,7 @@ export default function DetectPage() {
                     step={0.1}
                   />
                 </div>
-              )}
+              </div>
 
               {error && <div className="error-msg">{error}</div>}
 
